@@ -157,7 +157,7 @@ function Home() {
             variants={staggerParent}
             className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
           >
-            {products.map((p) => (
+            {products.slice(0, 6).map((p) => (
               <motion.li
                 key={p.id}
                 variants={fadeUp}
@@ -165,7 +165,7 @@ function Home() {
                 transition={{ duration: 0.18, ease: EASE_OUT }}
                 className="relative flex flex-col rounded-3xl bg-card p-5 shadow-soft"
               >
-                {p.isNew && (
+                {p.badges.includes("NEW") && (
                   <span className="absolute right-4 top-4 rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase text-accent-foreground">
                     New
                   </span>
@@ -173,7 +173,7 @@ function Home() {
                 <div className="grid h-44 place-items-center rounded-2xl bg-secondary/40">
                   <img
                     src={p.image}
-                    alt={`${p.name} — ${p.flavourLabel} yoghurt`}
+                    alt={`${p.name} — ${flavourLabels[p.flavour]} yoghurt`}
                     width={768}
                     height={768}
                     loading="lazy"
@@ -186,10 +186,12 @@ function Home() {
                     className={`h-3 w-3 shrink-0 rounded-full ring-1 ring-border ${flavourChip[p.flavour]}`}
                     aria-hidden="true"
                   />
-                  <span className="text-xs font-medium text-muted-foreground">{p.flavourLabel}</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {flavourLabels[p.flavour]}
+                  </span>
                 </div>
                 <h3 className="mt-1 truncate text-lg font-semibold">{p.name}</h3>
-                <p className="text-xs text-muted-foreground">{p.kind}</p>
+                <p className="text-xs text-muted-foreground">{p.size}</p>
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <span className="font-display text-lg font-bold">GH₵ {p.price}</span>
                   <button
