@@ -12,7 +12,7 @@ const links = [
 ] as const;
 
 export function Navbar() {
-  const { count } = useCart();
+  const { count, openCart } = useCart();
 
   return (
     <motion.header
@@ -46,6 +46,7 @@ export function Navbar() {
 
         <button
           type="button"
+          onClick={openCart}
           aria-label={`Cart, ${count} items`}
           className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
         >

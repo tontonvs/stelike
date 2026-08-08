@@ -223,3 +223,7 @@ export const products: Product[] = [
 export function variantsOf(product: Product) {
   return products.filter((p) => p.line === product.line && p.id !== product.id);
 }
+
+export function productById(id: string) {
+  return products.find((p) => p.id === id);
+}
