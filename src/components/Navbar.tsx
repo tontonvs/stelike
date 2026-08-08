@@ -51,9 +51,15 @@ export function Navbar() {
         >
           <ShoppingBag className="h-4 w-4" aria-hidden="true" />
           {count > 0 && (
-            <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
+            <motion.span
+              key={count}
+              initial={{ scale: 0.6 }}
+              animate={{ scale: [1.35, 1] }}
+              transition={{ duration: 0.28, ease: EASE_OUT }}
+              className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground"
+            >
               {count}
-            </span>
+            </motion.span>
           )}
         </button>
       </nav>
