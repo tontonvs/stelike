@@ -11,7 +11,7 @@ import {
   MapPin,
 } from "lucide-react";
 import heroImage from "@/assets/hero-yoglait.png";
-import { products, flavourChip } from "@/lib/products";
+import { products, flavourChip, flavourLabels } from "@/lib/products";
 import { useCart } from "@/components/CartProvider";
 import { fadeUp, staggerParent, viewportOnce, EASE_OUT } from "@/lib/motion";
 

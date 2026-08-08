@@ -50,7 +50,7 @@ export function QuantityStepper({ onAdd, label = "Buy", size = "sm" }: Props) {
             type="button"
             initial={reduce ? false : { opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={reduce ? undefined : { opacity: 0, scale: 0.9 }}
+            exit={{ opacity: 0, scale: reduce ? 1 : 0.9 }}
             transition={{ duration: 0.16, ease: EASE_OUT }}
             onClick={(e) => {
               e.stopPropagation();
@@ -68,7 +68,7 @@ export function QuantityStepper({ onAdd, label = "Buy", size = "sm" }: Props) {
             key="stepper"
             initial={reduce ? false : { opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={reduce ? undefined : { opacity: 0, scale: 0.92 }}
+            exit={{ opacity: 0, scale: reduce ? 1 : 0.92 }}
             transition={{ duration: 0.18, ease: EASE_OUT }}
             onClick={(e) => e.stopPropagation()}
             className="flex items-center gap-1 rounded-full bg-primary px-1.5 py-1 text-primary-foreground shadow-soft"
