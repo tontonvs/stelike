@@ -49,6 +49,7 @@
   --color-flavour-banana: var(--flavour-banana);
   --color-flavour-lime: var(--flavour-lime);
   --color-flavour-coconut: var(--flavour-coconut);
+  --color-flavour-pineapple: var(--flavour-pineapple);
 }
 
 :root {
@@ -83,6 +84,7 @@
   --flavour-banana: oklch(0.79 0.13 75);
   --flavour-lime: oklch(0.8 0.17 140);
   --flavour-coconut: oklch(0.78 0.1 235);
+  --flavour-pineapple: oklch(0.87 0.16 92);
 
   --gradient-hero: linear-gradient(180deg, var(--sky) 0%, oklch(0.94 0.03 220) 55%, var(--cream) 100%);
   --shadow-float: 0 18px 40px -18px oklch(0.32 0.062 250 / 0.35);
