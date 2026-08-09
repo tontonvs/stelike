@@ -3,7 +3,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useCart } from "./CartProvider";
-import { productById, flavourChip, flavourLabels } from "@/lib/products";
+import { resolveCartItems, cartSubtotal } from "@/lib/cart";
+import { flavourChip, flavourLabels } from "@/lib/products";
 import { EASE_OUT } from "@/lib/motion";
 
 export function CartDrawer() {
@@ -21,18 +22,8 @@ export function CartDrawer() {
     };
   }, [isOpen, closeCart]);
 
-  const items = lines
-    .map((line) => ({ line, product: productById(line.id) }))
-    .filter(
-      (
-        entry,
-      ): entry is {
-        line: (typeof lines)[number];
-        product: NonNullable<ReturnType<typeof productById>>;
-      } => Boolean(entry.product),
-    );
-
-  const subtotal = items.reduce((sum, { line, product }) => sum + line.qty * product.price, 0);
+  const items = resolveCartItems(lines);
+  const subtotal = cartSubtotal(items);
 
   return (
     <AnimatePresence>
@@ -196,23 +187,22 @@ export function CartDrawer() {
                   <span className="text-sm font-semibold text-muted-foreground">Subtotal</span>
                   <span className="font-display text-2xl font-bold">GH₵ {subtotal}</span>
                 </div>
-                <button
-                  type="button"
-                  disabled
-                  title="Checkout is coming soon"
-                  className="mt-4 w-full cursor-not-allowed rounded-full bg-primary/50 py-3 text-sm font-bold text-primary-foreground/70"
+                <Link
+                  to="/checkout"
+                  onClick={closeCart}
+                  className="mt-4 block w-full rounded-full bg-primary py-3 text-center text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
                 >
-                  Checkout — coming soon
-                </button>
+                  Checkout
+                </Link>
                 <p className="mt-2 text-center text-[11px] text-muted-foreground">
-                  For now, WhatsApp us to place this order:{" "}
+                  Prefer WhatsApp?{" "}
                   <a
                     href="https://wa.me/233205527771"
                     target="_blank"
                     rel="noreferrer"
                     className="font-semibold text-foreground underline"
                   >
-                    +233 20 552 7771
+                    Message us to order
                   </a>
                 </p>
               </div>

@@ -1,0 +1,415 @@
+import { useMemo, useRef, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Check, ChevronLeft, Loader2, ShoppingBag } from "lucide-react";
+import { useCart } from "@/components/CartProvider";
+import { resolveCartItems, cartSubtotal, DELIVERY_FEE } from "@/lib/cart";
+import { flavourChip, flavourLabels } from "@/lib/products";
+import { payWithPaystack } from "@/lib/paystack";
+import { EASE_OUT } from "@/lib/motion";
+
+export const Route = createFileRoute("/checkout")({
+  head: () => ({
+    meta: [
+      { title: "Checkout — Yoglait" },
+      {
+        name: "description",
+        content: "Complete your Yoglait order — delivery details and secure payment.",
+      },
+    ],
+  }),
+  component: CheckoutPage,
+});
+
+type Step = "details" | "summary" | "payment";
+const steps: { id: Step; label: string }[] = [
+  { id: "details", label: "Details" },
+  { id: "summary", label: "Summary" },
+  { id: "payment", label: "Payment" },
+];
+
+type FormState = { name: string; phone: string; email: string; address: string; note: string };
+const emptyForm: FormState = { name: "", phone: "", email: "", address: "", note: "" };
+
+function makeReference() {
+  return `YOG-${Date.now().toString(36).toUpperCase()}`;
+}
+
+function CheckoutPage() {
+  const { lines, clear } = useCart();
+  const reduce = useReducedMotion();
+  const [step, setStep] = useState<Step>("details");
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+  const [confirmedRef, setConfirmedRef] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const reference = useRef(makeReference());
+
+  const items = useMemo(() => resolveCartItems(lines), [lines]);
+  const subtotal = useMemo(() => cartSubtotal(items), [items]);
+  const total = subtotal + (items.length > 0 ? DELIVERY_FEE : 0);
+
+  const stepIndex = steps.findIndex((s) => s.id === step);
+
+  const goNext = () => {
+    if (step === "details") {
+      if (!formRef.current?.reportValidity()) return;
+      setStep("summary");
+    } else if (step === "summary") {
+      setStep("payment");
+    }
+  };
+
+  const goBack = () => {
+    if (step === "summary") setStep("details");
+    else if (step === "payment") setStep("summary");
+  };
+
+  const handlePay = async () => {
+    setPayError(null);
+    setPaying(true);
+    try {
+      await payWithPaystack(
+        {
+          email: form.email,
+          amount: Math.round(total * 100),
+          reference: reference.current,
+          channels: ["card", "mobile_money"],
+          metadata: {
+            custom_fields: [
+              { display_name: "Customer", variable_name: "customer_name", value: form.name },
+              { display_name: "Phone", variable_name: "phone", value: form.phone },
+              { display_name: "Address", variable_name: "address", value: form.address },
+            ],
+          },
+        },
+        {
+          onSuccess: (ref) => {
+            setPaying(false);
+            setConfirmedRef(ref);
+            clear();
+          },
+          onCancel: () => setPaying(false),
+        },
+      );
+    } catch (err) {
+      setPaying(false);
+      setPayError(err instanceof Error ? err.message : "Something went wrong starting payment.");
+    }
+  };
+
+  // Order confirmed — show this regardless of step.
+  if (confirmedRef) {
+    const waMessage = encodeURIComponent(
+      `Hi Yoglait! I just paid for order ${confirmedRef}. Please confirm delivery to: ${form.address}`,
+    );
+    return (
+      <section className="flex min-h-[80vh] items-center justify-center bg-hero-gradient px-5 pt-32 pb-24 sm:px-8">
+        <motion.div
+          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: EASE_OUT }}
+          className="w-full max-w-md rounded-4xl bg-card p-8 text-center shadow-float"
+        >
+          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary text-primary-foreground">
+            <Check className="h-8 w-8" aria-hidden="true" />
+          </span>
+          <h1 className="font-display mt-5 text-3xl font-bold">Joy, confirmed.</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Payment received. Your order reference is
+          </p>
+          <p className="font-display mt-1 text-lg font-bold tracking-wide">{confirmedRef}</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            We'll WhatsApp you shortly to confirm delivery timing.
+          </p>
+          <a
+            href={`https://wa.me/233205527771?text=${waMessage}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+          >
+            Message us on WhatsApp
+          </a>
+          <Link
+            to="/menu"
+            className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-secondary py-3 text-sm font-semibold text-secondary-foreground transition-transform duration-200 hover:scale-105 active:scale-95"
+          >
+            Back to Menu
+          </Link>
+        </motion.div>
+      </section>
+    );
+  }
+
+  // Nothing to check out.
+  if (items.length === 0) {
+    return (
+      <section className="flex min-h-[70vh] flex-col items-center justify-center gap-4 bg-hero-gradient px-5 pt-32 pb-24 text-center sm:px-8">
+        <span className="grid h-14 w-14 place-items-center rounded-full bg-secondary/60">
+          <ShoppingBag className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+        </span>
+        <h1 className="font-display text-2xl font-bold">Your cart's empty</h1>
+        <p className="max-w-xs text-sm text-muted-foreground">
+          Add a few flavours from the menu before checking out.
+        </p>
+        <Link
+          to="/menu"
+          className="mt-2 rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+        >
+          Browse Menu
+        </Link>
+      </section>
+    );
+  }
+
+  return (
+    <section className="relative overflow-hidden bg-hero-gradient px-5 pt-32 pb-24 sm:px-8 sm:pt-36">
+      <div className="mx-auto max-w-lg">
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">Checkout</h1>
+
+        {/* Step indicator */}
+        <div className="mt-6 flex items-center gap-2">
+          {steps.map((s, i) => (
+            <div key={s.id} className="flex flex-1 items-center gap-2">
+              <span
+                className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold transition-colors duration-200 ${
+                  i <= stepIndex
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary/60 text-muted-foreground"
+                }`}
+              >
+                {i < stepIndex ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : i + 1}
+              </span>
+              <span
+                className={`text-xs font-semibold ${i <= stepIndex ? "text-foreground" : "text-muted-foreground"}`}
+              >
+                {s.label}
+              </span>
+              {i < steps.length - 1 && (
+                <span className="h-px flex-1 bg-border" aria-hidden="true" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="relative mt-6 min-h-[420px] overflow-hidden rounded-4xl bg-card p-6 shadow-soft">
+          <AnimatePresence mode="wait" initial={false}>
+            {step === "details" && (
+              <motion.form
+                key="details"
+                ref={formRef}
+                initial={reduce ? { opacity: 0 } : { opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={reduce ? { opacity: 0 } : { opacity: 0, x: -24 }}
+                transition={{ duration: 0.22, ease: EASE_OUT }}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  goNext();
+                }}
+                noValidate={false}
+                className="flex flex-col gap-4"
+              >
+                <Field label="Full name">
+                  <input
+                    required
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+                    placeholder="Ama Owusu"
+                  />
+                </Field>
+                <Field label="Phone number">
+                  <input
+                    required
+                    type="tel"
+                    inputMode="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                    className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+                    placeholder="020 000 0000"
+                  />
+                </Field>
+                <Field label="Email">
+                  <input
+                    required
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+                    placeholder="you@example.com"
+                  />
+                </Field>
+                <Field label="Delivery address">
+                  <textarea
+                    required
+                    value={form.address}
+                    onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                    rows={2}
+                    className="w-full resize-none rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+                    placeholder="House number, street, area — Accra/Tema"
+                  />
+                </Field>
+                <Field label="Note (optional)">
+                  <input
+                    value={form.note}
+                    onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                    className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+                    placeholder="Gate code, landmark, delivery time..."
+                  />
+                </Field>
+
+                <button
+                  type="submit"
+                  className="mt-2 rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+                >
+                  Continue to Summary
+                </button>
+              </motion.form>
+            )}
+
+            {step === "summary" && (
+              <motion.div
+                key="summary"
+                initial={reduce ? { opacity: 0 } : { opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={reduce ? { opacity: 0 } : { opacity: 0, x: -24 }}
+                transition={{ duration: 0.22, ease: EASE_OUT }}
+                className="flex flex-col gap-4"
+              >
+                <ul className="flex flex-col gap-3">
+                  {items.map(({ line, product }) => (
+                    <li key={line.id} className="flex items-center gap-3">
+                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-secondary/40">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          width={768}
+                          height={768}
+                          loading="lazy"
+                          decoding="async"
+                          className="h-9 w-auto object-contain"
+                        />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`h-2 w-2 shrink-0 rounded-full ring-1 ring-border ${flavourChip[product.flavour]}`}
+                            aria-hidden="true"
+                          />
+                          <span className="truncate text-xs text-muted-foreground">
+                            {flavourLabels[product.flavour]} · {product.size}
+                          </span>
+                        </div>
+                        <p className="truncate text-sm font-semibold">
+                          {product.name} <span className="text-muted-foreground">× {line.qty}</span>
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-bold">
+                        GH₵ {line.qty * product.price}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-2 flex flex-col gap-1.5 border-t border-border pt-4 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span>GH₵ {subtotal}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Delivery</span>
+                    <span>GH₵ {DELIVERY_FEE}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-bold text-foreground">
+                    <span>Total</span>
+                    <span>GH₵ {total}</span>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    className="inline-flex items-center gap-1 rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground transition-transform duration-200 hover:scale-105 active:scale-95"
+                  >
+                    <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    className="flex-1 rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+                  >
+                    Continue to Payment
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === "payment" && (
+              <motion.div
+                key="payment"
+                initial={reduce ? { opacity: 0 } : { opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={reduce ? { opacity: 0 } : { opacity: 0, x: -24 }}
+                transition={{ duration: 0.22, ease: EASE_OUT }}
+                className="flex flex-col gap-4"
+              >
+                <div className="rounded-3xl bg-secondary/30 p-4 text-sm">
+                  <p className="font-semibold">{form.name}</p>
+                  <p className="text-muted-foreground">{form.phone}</p>
+                  <p className="text-muted-foreground">{form.address}</p>
+                </div>
+
+                <div className="flex items-center justify-between rounded-3xl bg-secondary/30 p-4">
+                  <span className="text-sm font-semibold text-muted-foreground">Total to pay</span>
+                  <span className="font-display text-2xl font-bold">GH₵ {total}</span>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Pay securely by card or Mobile Money via Paystack. You'll get a confirmation once
+                  it's done.
+                </p>
+
+                {payError && (
+                  <p className="rounded-2xl bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive">
+                    {payError}
+                  </p>
+                )}
+
+                <div className="mt-1 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    disabled={paying}
+                    className="inline-flex items-center gap-1 rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-50"
+                  >
+                    <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePay}
+                    disabled={paying}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-70"
+                  >
+                    {paying && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                    {paying ? "Opening Paystack…" : `Pay GH₵ ${total}`}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">{label}</span>
+      {children}
+    </label>
+  );
+}
