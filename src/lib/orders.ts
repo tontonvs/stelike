@@ -67,3 +67,41 @@ export async function lookupOrdersByPhone(phone: string): Promise<OrderRow[]> {
   if (error) throw new Error(error.message);
   return (data ?? []) as OrderRow[];
 }
+
+/** Full order list for the staff dashboard. Relies on the "staff read all orders"
+ * RLS policy — only succeeds for a logged-in user present in the `staff` table. */
+export async function listOrders(): Promise<OrderRow[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OrderRow[];
+}
+
+/** Manual override for the rare case the Paystack webhook doesn't land (or an
+ * order was taken by phone/WhatsApp outside the site). Staff-only via RLS. */
+export async function confirmPaymentManually(orderId: string, staffId: string): Promise<void> {
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      payment_status: "paid",
+      payment_method: "manual",
+      confirmed_by: staffId,
+      paid_at: new Date().toISOString(),
+    })
+    .eq("id", orderId);
+  if (error) throw new Error(error.message);
+}
+
+export async function markDelivered(orderId: string, staffId: string): Promise<void> {
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      delivery_status: "delivered",
+      delivered_by: staffId,
+      delivered_at: new Date().toISOString(),
+    })
+    .eq("id", orderId);
+  if (error) throw new Error(error.message);
+}
