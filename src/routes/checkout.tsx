@@ -1,11 +1,12 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check, ChevronLeft, Loader2, ShoppingBag } from "lucide-react";
+import { Check, ChevronLeft, Loader2, ShoppingBag, Sparkles } from "lucide-react";
 import { useCart } from "@/components/CartProvider";
 import { resolveCartItems, cartSubtotal, DELIVERY_FEE } from "@/lib/cart";
 import { flavourChip, flavourLabels } from "@/lib/products";
 import { payWithPaystack } from "@/lib/paystack";
+import { createOrder, lookupOrdersByPhone, type OrderRow } from "@/lib/orders";
 import { EASE_OUT } from "@/lib/motion";
 
 export const Route = createFileRoute("/checkout")({
@@ -43,6 +44,10 @@ function CheckoutPage() {
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [confirmedRef, setConfirmedRef] = useState<string | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [lookupMatch, setLookupMatch] = useState<OrderRow | null>(null);
+  const [lookupDismissed, setLookupDismissed] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const reference = useRef(makeReference());
 
@@ -52,12 +57,67 @@ function CheckoutPage() {
 
   const stepIndex = steps.findIndex((s) => s.id === step);
 
-  const goNext = () => {
+  // Returning-customer lookup: fires when the phone field loses focus. Best-effort —
+  // a failed lookup (offline, RLS issue, etc.) should never block checkout, so errors
+  // are swallowed here rather than surfaced.
+  const handlePhoneBlur = async () => {
+    const phone = form.phone.trim();
+    if (phone.length < 9 || lookupDismissed || form.name.trim() || form.address.trim()) return;
+    try {
+      const matches = await lookupOrdersByPhone(phone);
+      if (matches[0]) setLookupMatch(matches[0]);
+    } catch {
+      // Silent — lookup is a nice-to-have, not a checkout blocker.
+    }
+  };
+
+  const applyLookupMatch = () => {
+    if (!lookupMatch) return;
+    setForm((f) => ({
+      ...f,
+      name: lookupMatch.customer_name,
+      email: lookupMatch.customer_email,
+      address: lookupMatch.address,
+    }));
+    setLookupMatch(null);
+  };
+
+  const goNext = async () => {
     if (step === "details") {
       if (!formRef.current?.reportValidity()) return;
       setStep("summary");
-    } else if (step === "summary") {
-      setStep("payment");
+      return;
+    }
+
+    if (step === "summary") {
+      setOrderError(null);
+      setSavingOrder(true);
+      try {
+        await createOrder({
+          reference: reference.current,
+          name: form.name,
+          phone: form.phone,
+          email: form.email,
+          address: form.address,
+          note: form.note,
+          items: items.map(({ line, product }) => ({
+            id: product.id,
+            name: product.name,
+            qty: line.qty,
+            price: product.price,
+          })),
+          subtotal,
+          deliveryFee: DELIVERY_FEE,
+          total,
+        });
+        setStep("payment");
+      } catch (err) {
+        setOrderError(
+          err instanceof Error ? err.message : "Could not save your order. Please try again.",
+        );
+      } finally {
+        setSavingOrder(false);
+      }
     }
   };
 
@@ -225,11 +285,47 @@ function CheckoutPage() {
                     type="tel"
                     inputMode="tel"
                     value={form.phone}
-                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, phone: e.target.value }));
+                      setLookupMatch(null);
+                    }}
+                    onBlur={handlePhoneBlur}
                     className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
                     placeholder="020 000 0000"
                   />
                 </Field>
+
+                {lookupMatch && (
+                  <motion.div
+                    initial={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, ease: EASE_OUT }}
+                    className="flex items-center gap-3 rounded-2xl bg-primary/10 px-4 py-3"
+                  >
+                    <Sparkles className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                    <p className="flex-1 text-xs text-foreground">
+                      Welcome back, {lookupMatch.customer_name}! Use your saved details?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={applyLookupMatch}
+                      className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-transform duration-150 hover:scale-105 active:scale-95"
+                    >
+                      Use it
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLookupMatch(null);
+                        setLookupDismissed(true);
+                      }}
+                      className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                    >
+                      Dismiss
+                    </button>
+                  </motion.div>
+                )}
+
                 <Field label="Email">
                   <input
                     required
@@ -327,20 +423,29 @@ function CheckoutPage() {
                   </div>
                 </div>
 
+                {orderError && (
+                  <p className="rounded-2xl bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive">
+                    {orderError}
+                  </p>
+                )}
+
                 <div className="mt-2 flex gap-3">
                   <button
                     type="button"
                     onClick={goBack}
-                    className="inline-flex items-center gap-1 rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground transition-transform duration-200 hover:scale-105 active:scale-95"
+                    disabled={savingOrder}
+                    className="inline-flex items-center gap-1 rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-secondary-foreground transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-50"
                   >
                     <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Back
                   </button>
                   <button
                     type="button"
                     onClick={goNext}
-                    className="flex-1 rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+                    disabled={savingOrder}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-70"
                   >
-                    Continue to Payment
+                    {savingOrder && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                    {savingOrder ? "Saving order…" : "Continue to Payment"}
                   </button>
                 </div>
               </motion.div>
