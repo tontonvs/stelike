@@ -28,3 +28,40 @@ export async function getCurrentStaff(): Promise<StaffProfile | null> {
   if (error || !data) return null;
   return data as StaffProfile;
 }
+
+/** Admin-only (enforced by RLS). Lists everyone in the staff table. */
+export async function listStaff(): Promise<StaffProfile[]> {
+  const { data, error } = await supabase
+    .from("staff")
+    .select("id, name, role")
+    .order("role", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as StaffProfile[];
+}
+
+/** Admin-only (enforced by RLS). Removes a sub-admin's staff row — their login
+ * still technically exists in Supabase Auth, but with no staff row every
+ * is_staff()/is_admin() check fails, so they lose all dashboard access. */
+export async function removeStaff(staffId: string): Promise<void> {
+  const { error } = await supabase.from("staff").delete().eq("id", staffId);
+  if (error) throw new Error(error.message);
+}
+
+/** Admin-only. Creates a new sub-admin login + staff row via the create-staff
+ * edge function — this can't be done directly from the browser since it
+ * needs the service-role key to create a Supabase Auth user. */
+export async function createSubAdmin(input: {
+  name: string;
+  email: string;
+  password: string;
+}): Promise<StaffProfile> {
+  const { data, error } = await supabase.functions.invoke<StaffProfile | { error: string }>(
+    "create-staff",
+    { body: input },
+  );
+
+  if (error) throw new Error(error.message);
+  if (data && "error" in data) throw new Error(data.error);
+  if (!data) throw new Error("No response from create-staff.");
+  return data;
+}
