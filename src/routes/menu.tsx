@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Loader2, Search } from "lucide-react";
@@ -16,6 +16,8 @@ import { ProductSheet } from "@/components/ProductSheet";
 import { fadeUp, staggerParent, EASE_OUT } from "@/lib/motion";
 
 export const Route = createFileRoute("/menu")({
+  validateSearch: (search: Record<string, unknown>): { q?: string } =>
+    typeof search["q"] === "string" ? { q: search["q"] } : {},
   head: () => ({
     meta: [
       { title: "Menu — Yoglait Drinking Yoghurt, Tubs & Fruit Cups" },
@@ -52,11 +54,19 @@ function matchesSize(p: Product, size: SizeOption) {
 
 function MenuPage() {
   const { data: products, isLoading } = useProducts();
-  const [query, setQuery] = useState("");
+  const search = Route.useSearch();
+  const [query, setQuery] = useState(search.q ?? "");
   const [lines, setLines] = useState<Line[]>([]);
   const [sizes, setSizes] = useState<SizeOption[]>([]);
   const [flavours, setFlavours] = useState<Flavour[]>([]);
   const [active, setActive] = useState<Product | null>(null);
+
+  // Keeps the search box in sync if the navbar search is used again while
+  // already on this page (the route doesn't remount, so state won't pick up
+  // a new ?q= on its own).
+  useEffect(() => {
+    if (search.q !== undefined) setQuery(search.q);
+  }, [search.q]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();

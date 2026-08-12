@@ -1,6 +1,7 @@
-import { Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
-import { ShoppingBag } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { AnimatePresence, motion } from "framer-motion";
+import { Search, ShoppingBag, X } from "lucide-react";
 import { useCart } from "./CartProvider";
 import { EASE_OUT } from "@/lib/motion";
 
@@ -13,6 +14,37 @@ const links = [
 
 export function Navbar() {
   const { count, openCart } = useCart();
+  const navigate = useNavigate();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // First-item pulse: only fires on the 0 -> 1 transition, not on every add,
+  // so it draws a first-time visitor's eye to the cart without becoming
+  // annoying on repeat purchases.
+  const prevCount = useRef(count);
+  const [justAddedFirst, setJustAddedFirst] = useState(false);
+  useEffect(() => {
+    const wasEmpty = prevCount.current === 0;
+    prevCount.current = count;
+    if (wasEmpty && count > 0) {
+      setJustAddedFirst(true);
+      const timeout = window.setTimeout(() => setJustAddedFirst(false), 1200);
+      return () => window.clearTimeout(timeout);
+    }
+    return undefined;
+  }, [count]);
+
+  useEffect(() => {
+    if (searchOpen) inputRef.current?.focus();
+  }, [searchOpen]);
+
+  const handleSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const q = searchValue.trim();
+    navigate({ to: "/menu", search: q ? { q } : {} });
+    setSearchOpen(false);
+  };
 
   return (
     <motion.header
@@ -46,11 +78,34 @@ export function Navbar() {
 
         <button
           type="button"
+          onClick={() => setSearchOpen((o) => !o)}
+          aria-label={searchOpen ? "Close search" : "Search the menu"}
+          aria-expanded={searchOpen}
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-secondary/60 hover:text-foreground"
+        >
+          {searchOpen ? (
+            <X className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Search className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
+
+        <button
+          type="button"
           onClick={openCart}
           aria-label={`Cart, ${count} items`}
           className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
         >
-          <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+          {justAddedFirst && (
+            <motion.span
+              initial={{ scale: 1, opacity: 0.55 }}
+              animate={{ scale: 2.4, opacity: 0 }}
+              transition={{ duration: 1, ease: EASE_OUT, repeat: 1 }}
+              className="absolute inset-0 rounded-full bg-primary"
+              aria-hidden="true"
+            />
+          )}
+          <ShoppingBag className="relative h-4 w-4" aria-hidden="true" />
           {count > 0 && (
             <motion.span
               key={count}
@@ -64,6 +119,34 @@ export function Navbar() {
           )}
         </button>
       </nav>
+
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: EASE_OUT }}
+            className="mx-auto mt-2 max-w-4xl"
+          >
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex items-center gap-2 rounded-full border border-card/60 bg-card/90 px-4 py-2.5 shadow-float backdrop-blur-xl"
+            >
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <input
+                ref={inputRef}
+                type="search"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                placeholder="Search flavours — vanilla, strawberry, greek…"
+                aria-label="Search the menu"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 }
