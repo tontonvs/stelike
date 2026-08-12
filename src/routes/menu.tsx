@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Loader2, Search } from "lucide-react";
 import {
-  products,
   lineLabels,
   flavourLabels,
   flavourChipActive,
@@ -11,6 +10,7 @@ import {
   type Line,
   type Product,
 } from "@/lib/products";
+import { useProducts } from "@/hooks/useProducts";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductSheet } from "@/components/ProductSheet";
 import { fadeUp, staggerParent, EASE_OUT } from "@/lib/motion";
@@ -27,7 +27,8 @@ export const Route = createFileRoute("/menu")({
       { property: "og:title", content: "Menu — Yoglait" },
       {
         property: "og:description",
-        content: "Drinking pouches, probiotic tubs, Greek yoghurt and fruit cups, fresh from Accra.",
+        content:
+          "Drinking pouches, probiotic tubs, Greek yoghurt and fruit cups, fresh from Accra.",
       },
     ],
   }),
@@ -50,25 +51,30 @@ function matchesSize(p: Product, size: SizeOption) {
 }
 
 function MenuPage() {
+  const { data: products, isLoading } = useProducts();
+  const [query, setQuery] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [sizes, setSizes] = useState<SizeOption[]>([]);
   const [flavours, setFlavours] = useState<Flavour[]>([]);
   const [active, setActive] = useState<Product | null>(null);
 
-  const results = useMemo(
-    () =>
-      products.filter(
-        (p) =>
-          (lines.length === 0 || lines.includes(p.line)) &&
-          (sizes.length === 0 || sizes.some((s) => matchesSize(p, s))) &&
-          (flavours.length === 0 || flavours.includes(p.flavour)),
-      ),
-    [lines, sizes, flavours],
-  );
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (products ?? []).filter(
+      (p) =>
+        (lines.length === 0 || lines.includes(p.line)) &&
+        (sizes.length === 0 || sizes.some((s) => matchesSize(p, s))) &&
+        (flavours.length === 0 || flavours.includes(p.flavour)) &&
+        (q === "" ||
+          p.name.toLowerCase().includes(q) ||
+          flavourLabels[p.flavour].toLowerCase().includes(q)),
+    );
+  }, [products, lines, sizes, flavours, query]);
 
-  const hasFilters = lines.length + sizes.length + flavours.length > 0;
+  const hasFilters = lines.length + sizes.length + flavours.length > 0 || query.trim() !== "";
 
   const clear = () => {
+    setQuery("");
     setLines([]);
     setSizes([]);
     setFlavours([]);
@@ -91,7 +97,10 @@ function MenuPage() {
             <motion.h1 variants={fadeUp} className="mt-4 text-4xl font-bold sm:text-6xl">
               Your Daily Dose of Delicious
             </motion.h1>
-            <motion.p variants={fadeUp} className="mt-3 max-w-lg text-sm text-muted-foreground sm:text-base">
+            <motion.p
+              variants={fadeUp}
+              className="mt-3 max-w-lg text-sm text-muted-foreground sm:text-base"
+            >
               Every pouch, tub and cup we make — chilled, probiotic and ready for you.
             </motion.p>
           </motion.div>
@@ -113,6 +122,21 @@ function MenuPage() {
       {/* Filter bar */}
       <section className="mx-auto mt-8 max-w-6xl px-5 sm:px-8">
         <div className="rounded-4xl bg-card p-5 shadow-soft">
+          <div className="relative mb-4">
+            <Search
+              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search flavours — vanilla, strawberry, greek…"
+              aria-label="Search products"
+              className="w-full rounded-full bg-secondary/40 py-3 pl-11 pr-4 text-sm outline-none ring-primary/40 focus:ring-2"
+            />
+          </div>
+
           <FilterGroup label="Type">
             {lineOptions.map((l) => (
               <button
@@ -172,7 +196,10 @@ function MenuPage() {
           </FilterGroup>
 
           <div className="mt-5 flex items-center justify-between gap-3">
-            <p aria-live="polite" className="text-xs font-semibold text-muted-foreground sm:text-sm">
+            <p
+              aria-live="polite"
+              className="text-xs font-semibold text-muted-foreground sm:text-sm"
+            >
               {results.length} {results.length === 1 ? "product" : "products"}
             </p>
             <AnimatePresence initial={false}>
@@ -196,27 +223,40 @@ function MenuPage() {
 
       {/* Grid */}
       <section className="mx-auto mt-8 max-w-6xl px-5 sm:px-8">
-        <motion.ul
-          initial="hidden"
-          animate="show"
-          variants={staggerParent}
-          className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          <AnimatePresence initial={false}>
-            {results.map((p) => (
-              <ProductCard key={p.id} product={p} onOpen={() => setActive(p)} />
-            ))}
-          </AnimatePresence>
-        </motion.ul>
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
+          </div>
+        ) : (
+          <>
+            <motion.ul
+              initial="hidden"
+              animate="show"
+              variants={staggerParent}
+              className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              <AnimatePresence initial={false}>
+                {results.map((p) => (
+                  <ProductCard key={p.id} product={p} onOpen={() => setActive(p)} />
+                ))}
+              </AnimatePresence>
+            </motion.ul>
 
-        {results.length === 0 && (
-          <p className="rounded-3xl bg-card p-10 text-center text-sm text-muted-foreground shadow-soft">
-            No products match those filters yet. Try clearing a few.
-          </p>
+            {results.length === 0 && (
+              <p className="rounded-3xl bg-card p-10 text-center text-sm text-muted-foreground shadow-soft">
+                No products match those filters yet. Try clearing a few.
+              </p>
+            )}
+          </>
         )}
       </section>
 
-      <ProductSheet product={active} onClose={() => setActive(null)} onSelect={setActive} />
+      <ProductSheet
+        product={active}
+        allProducts={products ?? []}
+        onClose={() => setActive(null)}
+        onSelect={setActive}
+      />
     </div>
   );
 }

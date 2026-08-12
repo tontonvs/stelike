@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as MenuRouteImport } from './routes/menu'
+import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as StaffLoginRouteImport } from './routes/staff-login'
 
@@ -42,6 +43,11 @@ const MenuRoute = MenuRouteImport.update({
   path: '/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrdersRoute = OrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaffRoute = StaffRouteImport.update({
   id: '/staff',
   path: '/staff',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/menu': typeof MenuRoute
+  '/orders': typeof OrdersRoute
   '/staff': typeof StaffRoute
   '/staff-login': typeof StaffLoginRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/menu': typeof MenuRoute
+  '/orders': typeof OrdersRoute
   '/staff': typeof StaffRoute
   '/staff-login': typeof StaffLoginRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/menu': typeof MenuRoute
+  '/orders': typeof OrdersRoute
   '/staff': typeof StaffRoute
   '/staff-login': typeof StaffLoginRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/contact'
     | '/menu'
+    | '/orders'
     | '/staff'
     | '/staff-login'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/contact'
     | '/menu'
+    | '/orders'
     | '/staff'
     | '/staff-login'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/contact'
     | '/menu'
+    | '/orders'
     | '/staff'
     | '/staff-login'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRoute
   ContactRoute: typeof ContactRoute
   MenuRoute: typeof MenuRoute
+  OrdersRoute: typeof OrdersRoute
   StaffRoute: typeof StaffRoute
   StaffLoginRoute: typeof StaffLoginRoute
 }
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orders': {
+      id: '/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff': {
       id: '/staff'
       path: '/staff'
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRoute,
   ContactRoute: ContactRoute,
   MenuRoute: MenuRoute,
+  OrdersRoute: OrdersRoute,
   StaffRoute: StaffRoute,
   StaffLoginRoute: StaffLoginRoute,
 }

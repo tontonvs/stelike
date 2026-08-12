@@ -1,12 +1,14 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check, ChevronLeft, Loader2, ShoppingBag, Sparkles } from "lucide-react";
+import { Check, ChevronLeft, Loader2, MapPin, ShoppingBag, Sparkles } from "lucide-react";
 import { useCart } from "@/components/CartProvider";
 import { resolveCartItems, cartSubtotal, DELIVERY_FEE } from "@/lib/cart";
 import { flavourChip, flavourLabels } from "@/lib/products";
+import { useProducts } from "@/hooks/useProducts";
 import { payWithPaystack } from "@/lib/paystack";
 import { createOrder, lookupOrdersByPhone, type OrderRow } from "@/lib/orders";
+import { isGpsAddress, gpsMapsUrl, formatGpsAddress } from "@/lib/address";
 import { EASE_OUT } from "@/lib/motion";
 
 export const Route = createFileRoute("/checkout")({
@@ -39,6 +41,7 @@ function makeReference() {
 function CheckoutPage() {
   const { lines, clear } = useCart();
   const reduce = useReducedMotion();
+  const { data: products } = useProducts();
   const [step, setStep] = useState<Step>("details");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [paying, setPaying] = useState(false);
@@ -48,10 +51,15 @@ function CheckoutPage() {
   const [orderError, setOrderError] = useState<string | null>(null);
   const [lookupMatch, setLookupMatch] = useState<OrderRow | null>(null);
   const [lookupDismissed, setLookupDismissed] = useState(false);
+  const [addressMode, setAddressMode] = useState<"type" | "location">("type");
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationCaptured, setLocationCaptured] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const reference = useRef(makeReference());
 
-  const items = useMemo(() => resolveCartItems(lines), [lines]);
+  const items = useMemo(() => resolveCartItems(lines, products ?? []), [lines, products]);
   const subtotal = useMemo(() => cartSubtotal(items), [items]);
   const total = subtotal + (items.length > 0 ? DELIVERY_FEE : 0);
 
@@ -76,15 +84,55 @@ function CheckoutPage() {
     setForm((f) => ({
       ...f,
       name: lookupMatch.customer_name,
-      email: lookupMatch.customer_email,
+      email: lookupMatch.customer_email ?? "",
       address: lookupMatch.address,
     }));
+    setAddressMode(isGpsAddress(lookupMatch.address) ? "location" : "type");
+    setLocationCaptured(isGpsAddress(lookupMatch.address));
     setLookupMatch(null);
+  };
+
+  const handleShareLocation = () => {
+    setLocationError(null);
+    if (!("geolocation" in navigator)) {
+      setLocationError(
+        "Location isn't supported on this browser — try typing your address instead.",
+      );
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm((f) => ({
+          ...f,
+          address: formatGpsAddress(pos.coords.latitude, pos.coords.longitude),
+        }));
+        setLocationCaptured(true);
+        setAddressError(null);
+        setLocating(false);
+      },
+      (err) => {
+        setLocating(false);
+        const message =
+          err.code === err.PERMISSION_DENIED
+            ? "Location access was blocked — allow it in your browser, or type your address instead."
+            : err.code === err.TIMEOUT
+              ? "Took too long to get your location — try again, or type your address instead."
+              : "Couldn't get your location — try again, or type your address instead.";
+        setLocationError(message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
   };
 
   const goNext = async () => {
     if (step === "details") {
       if (!formRef.current?.reportValidity()) return;
+      if (!form.address.trim()) {
+        setAddressError("Please add a delivery address or share your location.");
+        return;
+      }
+      setAddressError(null);
       setStep("summary");
       return;
     }
@@ -129,10 +177,14 @@ function CheckoutPage() {
   const handlePay = async () => {
     setPayError(null);
     setPaying(true);
+    // Paystack requires an email even though ours is optional — fall back to a
+    // synthetic, undeliverable one tied to their phone number rather than block payment.
+    const payerEmail =
+      form.email.trim() || `${form.phone.replace(/\D/g, "") || "guest"}@yoglait-noemail.local`;
     try {
       await payWithPaystack(
         {
-          email: form.email,
+          email: payerEmail,
           amount: Math.round(total * 100),
           reference: reference.current,
           channels: ["card", "mobile_money"],
@@ -326,9 +378,8 @@ function CheckoutPage() {
                   </motion.div>
                 )}
 
-                <Field label="Email">
+                <Field label="Email (optional)">
                   <input
-                    required
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
@@ -336,16 +387,100 @@ function CheckoutPage() {
                     placeholder="you@example.com"
                   />
                 </Field>
-                <Field label="Delivery address">
-                  <textarea
-                    required
-                    value={form.address}
-                    onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                    rows={2}
-                    className="w-full resize-none rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
-                    placeholder="House number, street, area — Accra/Tema"
-                  />
-                </Field>
+                <div>
+                  <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+                    Delivery address
+                  </span>
+                  <div className="mb-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAddressMode("type")}
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors duration-150 ${
+                        addressMode === "type"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary/60 text-muted-foreground"
+                      }`}
+                    >
+                      Type address
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAddressMode("location")}
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors duration-150 ${
+                        addressMode === "location"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary/60 text-muted-foreground"
+                      }`}
+                    >
+                      Share my location
+                    </button>
+                  </div>
+
+                  {addressMode === "type" ? (
+                    <textarea
+                      value={isGpsAddress(form.address) ? "" : form.address}
+                      onChange={(e) => {
+                        setForm((f) => ({ ...f, address: e.target.value }));
+                        setAddressError(null);
+                      }}
+                      rows={2}
+                      className="w-full resize-none rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+                      placeholder="House number, street, area — Accra/Tema"
+                    />
+                  ) : (
+                    <div className="rounded-2xl bg-secondary/40 p-4">
+                      {locationCaptured && isGpsAddress(form.address) ? (
+                        <div className="flex items-start gap-2">
+                          <MapPin
+                            className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                            aria-hidden="true"
+                          />
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-foreground">
+                              Location captured ✓
+                            </p>
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              Please stay where you are until delivery arrives — moving around after
+                              sharing your location can cause delivery to fail.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={handleShareLocation}
+                              className="mt-2 text-[11px] font-semibold text-primary underline"
+                            >
+                              Re-share location
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleShareLocation}
+                          disabled={locating}
+                          className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-70"
+                        >
+                          {locating ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                          )}
+                          {locating ? "Getting your location…" : "Share my location"}
+                        </button>
+                      )}
+                      {locationError && (
+                        <p className="mt-2 text-[11px] font-medium text-destructive">
+                          {locationError}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {addressError && (
+                    <p className="mt-1.5 text-[11px] font-medium text-destructive">
+                      {addressError}
+                    </p>
+                  )}
+                </div>
                 <Field label="Note (optional)">
                   <input
                     value={form.note}
@@ -463,7 +598,18 @@ function CheckoutPage() {
                 <div className="rounded-3xl bg-secondary/30 p-4 text-sm">
                   <p className="font-semibold">{form.name}</p>
                   <p className="text-muted-foreground">{form.phone}</p>
-                  <p className="text-muted-foreground">{form.address}</p>
+                  {isGpsAddress(form.address) ? (
+                    <a
+                      href={gpsMapsUrl(form.address)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-primary underline"
+                    >
+                      <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> Shared location
+                    </a>
+                  ) : (
+                    <p className="text-muted-foreground">{form.address}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between rounded-3xl bg-secondary/30 p-4">

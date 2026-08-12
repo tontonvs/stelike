@@ -7,7 +7,7 @@ export type OrderRow = {
   reference: string;
   customer_name: string;
   customer_phone: string;
-  customer_email: string;
+  customer_email: string | null;
   address: string;
   note: string | null;
   items: OrderItemSnapshot[];
@@ -26,7 +26,7 @@ export type NewOrderInput = {
   reference: string;
   name: string;
   phone: string;
-  email: string;
+  email?: string;
   address: string;
   note?: string;
   items: OrderItemSnapshot[];
@@ -47,7 +47,7 @@ export async function createOrder(input: NewOrderInput): Promise<void> {
     reference: input.reference,
     customer_name: input.name,
     customer_phone: input.phone,
-    customer_email: input.email,
+    customer_email: input.email || null,
     address: input.address,
     note: input.note || null,
     items: input.items,

@@ -6,6 +6,7 @@ const links = [
   { to: "/menu", label: "Menu" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
+  { to: "/orders", label: "Track Order" },
 ] as const;
 
 export function Footer() {
@@ -24,7 +25,10 @@ export function Footer() {
           <ul className="mt-3 space-y-2 text-sm">
             {links.map((l) => (
               <li key={l.to}>
-                <Link to={l.to} className="text-muted-foreground transition-colors hover:text-primary">
+                <Link
+                  to={l.to}
+                  className="text-muted-foreground transition-colors hover:text-primary"
+                >
                   {l.label}
                 </Link>
               </li>
