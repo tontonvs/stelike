@@ -51,13 +51,15 @@ function CheckoutPage() {
   const [orderError, setOrderError] = useState<string | null>(null);
   const [lookupMatch, setLookupMatch] = useState<OrderRow | null>(null);
   const [lookupDismissed, setLookupDismissed] = useState(false);
-  const [addressMode, setAddressMode] = useState<"type" | "location">("type");
+  const [addressMode, setAddressMode] = useState<"type" | "location">("location");
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationCaptured, setLocationCaptured] = useState(false);
+  const [captureCount, setCaptureCount] = useState(0);
   const [addressError, setAddressError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const reference = useRef(makeReference());
+  const submittingRef = useRef(false);
 
   const items = useMemo(() => resolveCartItems(lines, products ?? []), [lines, products]);
   const subtotal = useMemo(() => cartSubtotal(items), [items]);
@@ -108,6 +110,7 @@ function CheckoutPage() {
           address: formatGpsAddress(pos.coords.latitude, pos.coords.longitude),
         }));
         setLocationCaptured(true);
+        setCaptureCount((c) => c + 1);
         setAddressError(null);
         setLocating(false);
       },
@@ -138,6 +141,11 @@ function CheckoutPage() {
     }
 
     if (step === "summary") {
+      // Synchronous guard against a double-click firing two inserts with the
+      // same reference before React re-renders the disabled button — state
+      // updates are async and don't close that window on their own.
+      if (submittingRef.current) return;
+      submittingRef.current = true;
       setOrderError(null);
       setSavingOrder(true);
       try {
@@ -160,11 +168,18 @@ function CheckoutPage() {
         });
         setStep("payment");
       } catch (err) {
-        setOrderError(
-          err instanceof Error ? err.message : "Could not save your order. Please try again.",
-        );
+        const message = err instanceof Error ? err.message : "";
+        if (message.includes("orders_reference_key")) {
+          // This reference already saved successfully in an earlier attempt
+          // (e.g. the double-click this guard exists for) — the order exists,
+          // so just continue rather than showing a scary duplicate-key error.
+          setStep("payment");
+        } else {
+          setOrderError(message || "Could not save your order. Please try again.");
+        }
       } finally {
         setSavingOrder(false);
+        submittingRef.current = false;
       }
     }
   };
@@ -180,7 +195,7 @@ function CheckoutPage() {
     // Paystack requires an email even though ours is optional — fall back to a
     // synthetic, undeliverable one tied to their phone number rather than block payment.
     const payerEmail =
-      form.email.trim() || `${form.phone.replace(/\D/g, "") || "guest"}@yoglait-noemail.local`;
+      form.email.trim() || `${form.phone.replace(/\D/g, "") || "guest"}@yoglait-noemail.com`;
     try {
       await payWithPaystack(
         {
@@ -322,15 +337,6 @@ function CheckoutPage() {
                 noValidate={false}
                 className="flex flex-col gap-4"
               >
-                <Field label="Full name">
-                  <input
-                    required
-                    value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
-                    placeholder="Ama Owusu"
-                  />
-                </Field>
                 <Field label="Phone number">
                   <input
                     required
@@ -378,100 +384,158 @@ function CheckoutPage() {
                   </motion.div>
                 )}
 
-                <Field label="Email (optional)">
+                <Field label="Full name">
                   <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    required
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
-                    placeholder="you@example.com"
+                    placeholder="Ama Owusu"
                   />
                 </Field>
-                <div>
-                  <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+
+                {/* Visually set apart from the required fields above, so it reads as
+                    skippable at a glance rather than one more field in the same list. */}
+                <div className="mt-1 border-t border-dashed border-border pt-4">
+                  <label className="block">
+                    <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                      Email
+                      <span className="rounded-full bg-secondary/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                        Optional
+                      </span>
+                    </span>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                      className="w-full rounded-2xl border border-dashed border-border bg-transparent px-4 py-2.5 text-sm outline-none ring-primary/40 focus:border-solid focus:ring-2"
+                      placeholder="you@example.com — only if you'd like a receipt"
+                    />
+                  </label>
+                </div>
+
+                <div className="border-t border-border pt-4">
+                  <span className="mb-2 block text-xs font-semibold text-muted-foreground">
                     Delivery address
                   </span>
-                  <div className="mb-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAddressMode("type")}
-                      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors duration-150 ${
-                        addressMode === "type"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary/60 text-muted-foreground"
-                      }`}
-                    >
-                      Type address
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAddressMode("location")}
-                      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors duration-150 ${
-                        addressMode === "location"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary/60 text-muted-foreground"
-                      }`}
-                    >
-                      Share my location
-                    </button>
-                  </div>
 
-                  {addressMode === "type" ? (
-                    <textarea
-                      value={isGpsAddress(form.address) ? "" : form.address}
-                      onChange={(e) => {
-                        setForm((f) => ({ ...f, address: e.target.value }));
-                        setAddressError(null);
-                      }}
-                      rows={2}
-                      className="w-full resize-none rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
-                      placeholder="House number, street, area — Accra/Tema"
-                    />
-                  ) : (
-                    <div className="rounded-2xl bg-secondary/40 p-4">
-                      {locationCaptured && isGpsAddress(form.address) ? (
-                        <div className="flex items-start gap-2">
-                          <MapPin
-                            className="mt-0.5 h-4 w-4 shrink-0 text-primary"
-                            aria-hidden="true"
-                          />
-                          <div className="flex-1">
-                            <p className="text-xs font-semibold text-foreground">
-                              Location captured ✓
-                            </p>
-                            <p className="mt-1 text-[11px] text-muted-foreground">
-                              Please stay where you are until delivery arrives — moving around after
-                              sharing your location can cause delivery to fail.
-                            </p>
-                            <button
+                  {addressMode === "location" ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="rounded-3xl bg-primary/10 p-4">
+                        <AnimatePresence mode="wait">
+                          {locating ? (
+                            <motion.div
+                              key="loading"
+                              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.18, ease: EASE_OUT }}
+                              className="flex items-center gap-3"
+                            >
+                              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                              </span>
+                              <span>
+                                <span className="block text-sm font-bold text-foreground">
+                                  Getting your location…
+                                </span>
+                                <span className="block text-[11px] text-muted-foreground">
+                                  Hang tight, this only takes a second
+                                </span>
+                              </span>
+                            </motion.div>
+                          ) : locationCaptured && isGpsAddress(form.address) ? (
+                            <motion.div
+                              key={`captured-${captureCount}`}
+                              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.25, ease: EASE_OUT }}
+                              className="flex items-start gap-2.5"
+                            >
+                              <motion.span
+                                initial={reduce ? false : { scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ duration: 0.3, ease: EASE_OUT, delay: 0.06 }}
+                                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"
+                              >
+                                <Check className="h-4 w-4" aria-hidden="true" />
+                              </motion.span>
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-foreground">
+                                  {captureCount > 1 ? "Location re-added ✓" : "Location added ✓"}
+                                </p>
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                  Please stay where you are until delivery arrives — moving around
+                                  after sharing your location can cause delivery to fail.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={handleShareLocation}
+                                  className="mt-2 text-[11px] font-semibold text-primary underline"
+                                >
+                                  Re-share location
+                                </button>
+                              </div>
+                            </motion.div>
+                          ) : (
+                            <motion.button
+                              key="idle"
+                              initial={reduce ? { opacity: 0 } : { opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.15, ease: EASE_OUT }}
                               type="button"
                               onClick={handleShareLocation}
-                              className="mt-2 text-[11px] font-semibold text-primary underline"
+                              className="flex w-full items-center gap-3 text-left"
                             >
-                              Re-share location
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleShareLocation}
-                          disabled={locating}
-                          className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-70"
-                        >
-                          {locating ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                          ) : (
-                            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
+                                <MapPin className="h-4 w-4" aria-hidden="true" />
+                              </span>
+                              <span>
+                                <span className="block text-sm font-bold text-foreground">
+                                  Share my location
+                                </span>
+                                <span className="block text-[11px] text-muted-foreground">
+                                  Fastest & most accurate — no typing needed
+                                </span>
+                              </span>
+                            </motion.button>
                           )}
-                          {locating ? "Getting your location…" : "Share my location"}
-                        </button>
-                      )}
-                      {locationError && (
-                        <p className="mt-2 text-[11px] font-medium text-destructive">
-                          {locationError}
-                        </p>
-                      )}
+                        </AnimatePresence>
+                        {locationError && (
+                          <p className="mt-2 text-[11px] font-medium text-destructive">
+                            {locationError}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAddressMode("type")}
+                        className="self-start text-[11px] font-semibold text-muted-foreground underline"
+                      >
+                        Or type your address manually
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <textarea
+                        autoFocus
+                        value={isGpsAddress(form.address) ? "" : form.address}
+                        onChange={(e) => {
+                          setForm((f) => ({ ...f, address: e.target.value }));
+                          setAddressError(null);
+                        }}
+                        rows={2}
+                        className="w-full resize-none rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+                        placeholder="House number, street, area — Accra/Tema"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAddressMode("location")}
+                        className="inline-flex items-center gap-1 self-start text-[11px] font-semibold text-primary"
+                      >
+                        <MapPin className="h-3 w-3" aria-hidden="true" /> Share my location instead
+                      </button>
                     </div>
                   )}
 
@@ -481,6 +545,7 @@ function CheckoutPage() {
                     </p>
                   )}
                 </div>
+
                 <Field label="Note (optional)">
                   <input
                     value={form.note}
