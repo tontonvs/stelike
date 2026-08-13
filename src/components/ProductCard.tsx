@@ -11,12 +11,12 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
     <motion.li
       layout={false}
       variants={fadeUp}
-      whileHover={{ y: -6, scale: 1.02 }}
+      whileHover={{ y: -4, scale: 1.01 }}
       transition={{ duration: 0.18, ease: EASE_OUT }}
-      className="relative flex flex-col rounded-3xl bg-card p-5 shadow-soft"
+      className="relative flex flex-col rounded-2xl bg-card p-3 shadow-sm sm:p-4"
     >
       {product.badges.includes("NEW") && (
-        <span className="absolute right-4 top-4 z-10 rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase text-accent-foreground">
+        <span className="absolute right-2 top-2 z-10 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase text-accent-foreground">
           New
         </span>
       )}
@@ -27,7 +27,7 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
         aria-label={`View details for ${product.name}`}
         className="text-left"
       >
-        <span className="grid h-44 w-full place-items-center rounded-2xl bg-secondary/40">
+        <span className="grid h-28 w-full place-items-center rounded-xl bg-secondary/40 sm:h-36">
           <img
             src={product.image}
             alt={`${product.name} — ${flavourLabels[product.flavour]} yoghurt`}
@@ -35,41 +35,40 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
             height={768}
             loading="lazy"
             decoding="async"
-            className="h-40 w-auto object-contain"
+            className="h-24 w-auto object-contain sm:h-32"
           />
         </span>
-        <span className="mt-4 flex min-w-0 items-center gap-2">
+        <span className="mt-2 flex min-w-0 items-center gap-1.5">
           <span
-            className={`h-3 w-3 shrink-0 rounded-full ring-1 ring-border ${flavourChip[product.flavour]}`}
+            className={`h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-border ${flavourChip[product.flavour]}`}
             aria-hidden="true"
           />
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className="truncate text-[11px] font-medium text-muted-foreground">
             {flavourLabels[product.flavour]} · {product.size}
           </span>
         </span>
-        <span className="font-display mt-1 block truncate text-lg font-semibold">
+        <span className="font-display mt-0.5 block truncate text-sm font-semibold sm:text-base">
           {product.name}
         </span>
-        <span className="block truncate text-xs text-muted-foreground">{product.tagline}</span>
       </button>
 
-      <ul className="mt-3 flex flex-wrap gap-1.5">
+      <ul className="mt-2 flex flex-wrap gap-1">
         {product.badges
           .filter((b) => b !== "NEW")
           .slice(0, 2)
           .map((b) => (
             <li
               key={b}
-              className="rounded-full bg-secondary/60 px-2.5 py-1 text-[10px] font-semibold text-secondary-foreground"
+              className="rounded-full bg-secondary/60 px-2 py-0.5 text-[9px] font-semibold text-secondary-foreground"
             >
               {b}
             </li>
           ))}
       </ul>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <span className="font-display text-lg font-bold">GH₵ {product.price}</span>
-        <QuantityStepper onAdd={(qty) => addItem(product.id, qty)} />
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <span className="font-display text-sm font-bold sm:text-base">GH₵ {product.price}</span>
+        <QuantityStepper onAdd={(qty) => addItem(product.id, qty)} size="md" />
       </div>
     </motion.li>
   );
