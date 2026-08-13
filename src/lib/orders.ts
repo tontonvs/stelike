@@ -17,6 +17,8 @@ export type OrderRow = {
   payment_status: "pending" | "paid" | "failed";
   payment_method: "paystack" | "manual";
   delivery_status: "processing" | "out_for_delivery" | "delivered";
+  rider_name: string | null;
+  rider_phone: string | null;
   created_at: string;
   paid_at: string | null;
   delivered_at: string | null;
@@ -102,6 +104,21 @@ export async function markDelivered(orderId: string, staffId: string): Promise<v
       delivered_by: staffId,
       delivered_at: new Date().toISOString(),
     })
+    .eq("id", orderId);
+  if (error) throw new Error(error.message);
+}
+
+/** Assigns (or reassigns) a rider to an order. Snapshots name/phone directly on
+ * the order rather than a foreign key, so past deliveries keep the exact number
+ * that was actually used even if the rider is later edited or removed. */
+export async function assignRider(
+  orderId: string,
+  riderName: string,
+  riderPhone: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("orders")
+    .update({ rider_name: riderName, rider_phone: riderPhone })
     .eq("id", orderId);
   if (error) throw new Error(error.message);
 }

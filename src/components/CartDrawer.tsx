@@ -5,11 +5,13 @@ import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useCart } from "./CartProvider";
 import { resolveCartItems, cartSubtotal } from "@/lib/cart";
 import { flavourChip, flavourLabels } from "@/lib/products";
+import { useProducts } from "@/hooks/useProducts";
 import { EASE_OUT } from "@/lib/motion";
 
 export function CartDrawer() {
   const { lines, isOpen, closeCart, removeItem, updateQty } = useCart();
   const reduce = useReducedMotion();
+  const { data: products } = useProducts();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -22,7 +24,7 @@ export function CartDrawer() {
     };
   }, [isOpen, closeCart]);
 
-  const items = resolveCartItems(lines);
+  const items = resolveCartItems(lines, products ?? []);
   const subtotal = cartSubtotal(items);
 
   return (

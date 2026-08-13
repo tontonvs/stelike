@@ -94,6 +94,18 @@ function CheckoutPage() {
     setLookupMatch(null);
   };
 
+  /** Switching away from "share location" while the field still holds an
+   * unconfirmed GPS value would otherwise leave it silently saved underneath
+   * the now-blanked textarea — visually empty, but still submittable as-is.
+   * Clearing it here keeps what's displayed and what's actually stored in sync. */
+  const switchToTypeMode = () => {
+    if (isGpsAddress(form.address)) {
+      setForm((f) => ({ ...f, address: "" }));
+      setLocationCaptured(false);
+    }
+    setAddressMode("type");
+  };
+
   const handleShareLocation = () => {
     setLocationError(null);
     if (!("geolocation" in navigator)) {
@@ -510,7 +522,7 @@ function CheckoutPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setAddressMode("type")}
+                        onClick={switchToTypeMode}
                         className="self-start text-[11px] font-semibold text-muted-foreground underline"
                       >
                         Or type your address manually

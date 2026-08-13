@@ -10,13 +10,7 @@ import coconut from "@/assets/flavour-coconut.png";
 import hero from "@/assets/hero-yoglait.png";
 
 export type Flavour =
-  | "plain"
-  | "vanilla"
-  | "strawberry"
-  | "banana"
-  | "pineapple"
-  | "lime"
-  | "coconut";
+  "plain" | "vanilla" | "strawberry" | "banana" | "pineapple" | "lime" | "coconut";
 
 export type Line = "drinking" | "probiotic" | "greek" | "cups";
 export type Format = "pouch" | "tub" | "cup";
@@ -220,10 +214,6 @@ export const products: Product[] = [
   },
 ];
 
-export function variantsOf(product: Product) {
-  return products.filter((p) => p.line === product.line && p.id !== product.id);
-}
-
-export function productById(id: string) {
-  return products.find((p) => p.id === id);
+export function variantsOf(product: Product, allProducts: Product[]) {
+  return allProducts.filter((p) => p.line === product.line && p.id !== product.id);
 }

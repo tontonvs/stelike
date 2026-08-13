@@ -1,24 +1,19 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
-import {
-  flavourChip,
-  flavourLabels,
-  lineLabels,
-  variantsOf,
-  type Product,
-} from "@/lib/products";
+import { flavourChip, flavourLabels, lineLabels, variantsOf, type Product } from "@/lib/products";
 import { useCart } from "./CartProvider";
 import { QuantityStepper } from "./QuantityStepper";
 import { EASE_OUT } from "@/lib/motion";
 
 type Props = {
   product: Product | null;
+  allProducts: Product[];
   onClose: () => void;
   onSelect: (p: Product) => void;
 };
 
-export function ProductSheet({ product, onClose, onSelect }: Props) {
+export function ProductSheet({ product, allProducts, onClose, onSelect }: Props) {
   const { addItem } = useCart();
   const reduce = useReducedMotion();
   const [slide, setSlide] = useState(0);
@@ -65,7 +60,10 @@ export function ProductSheet({ product, onClose, onSelect }: Props) {
             onClick={(e) => e.stopPropagation()}
             className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-4xl bg-card p-5 shadow-float sm:rounded-4xl"
           >
-            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-border sm:hidden" aria-hidden="true" />
+            <div
+              className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-border sm:hidden"
+              aria-hidden="true"
+            />
 
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -94,7 +92,8 @@ export function ProductSheet({ product, onClose, onSelect }: Props) {
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.15}
                 onDragEnd={(_, info) => {
-                  if (info.offset.x < -60) setSlide((s) => Math.min(s + 1, product.images.length - 1));
+                  if (info.offset.x < -60)
+                    setSlide((s) => Math.min(s + 1, product.images.length - 1));
                   if (info.offset.x > 60) setSlide((s) => Math.max(s - 1, 0));
                 }}
               >
@@ -154,7 +153,9 @@ export function ProductSheet({ product, onClose, onSelect }: Props) {
                 className={`h-3 w-3 rounded-full ring-1 ring-border ${flavourChip[product.flavour]}`}
                 aria-hidden="true"
               />
-              <span className="text-sm text-muted-foreground">{flavourLabels[product.flavour]}</span>
+              <span className="text-sm text-muted-foreground">
+                {flavourLabels[product.flavour]}
+              </span>
             </div>
 
             <p className="mt-3 text-sm text-muted-foreground">{product.description}</p>
@@ -170,11 +171,11 @@ export function ProductSheet({ product, onClose, onSelect }: Props) {
               ))}
             </ul>
 
-            {variantsOf(product).length > 0 && (
+            {variantsOf(product, allProducts).length > 0 && (
               <div className="mt-6">
                 <p className="font-display text-sm font-semibold">Other variants</p>
                 <ul className="mt-3 flex gap-3 overflow-x-auto pb-2">
-                  {variantsOf(product).map((v) => (
+                  {variantsOf(product, allProducts).map((v) => (
                     <li key={v.id}>
                       <button
                         type="button"
