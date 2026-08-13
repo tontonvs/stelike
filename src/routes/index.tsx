@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { Leaf, Shield, Sparkles, HeartPulse, Droplets, Snowflake, MapPin } from "lucide-react";
-import heroImage from "@/assets/hero-yoglait.png";
 import { flavourChip, flavourLabels } from "@/lib/products";
 import { useProducts } from "@/hooks/useProducts";
 import { useCart } from "@/components/CartProvider";
+import { HeroCarousel } from "@/components/HeroCarousel";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { fadeUp, staggerParent, viewportOnce, EASE_OUT } from "@/lib/motion";
 
