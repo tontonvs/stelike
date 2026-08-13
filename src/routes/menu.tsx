@@ -130,10 +130,10 @@ function MenuPage() {
         </svg>
       </section>
 
-      {/* Filter bar */}
+      {/* Search + filter dropdown */}
       <section className="mx-auto mt-8 max-w-6xl px-5 sm:px-8">
-        <div className="rounded-4xl bg-card p-5 shadow-soft">
-          <div className="relative mb-4">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
             <Search
               className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden="true"
@@ -147,95 +147,117 @@ function MenuPage() {
               className="w-full rounded-full bg-secondary/40 py-3 pl-11 pr-4 text-sm outline-none ring-primary/40 focus:ring-2"
             />
           </div>
-
-          <FilterGroup label="Type">
-            {lineOptions.map((l) => (
-              <button
-                key={l}
-                type="button"
-                aria-pressed={lines.includes(l)}
-                onClick={() => setLines((prev) => toggle(prev, l))}
-                className={`${chipBase} ${
-                  lines.includes(l)
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary/50 text-secondary-foreground"
-                }`}
-              >
-                {lineLabels[l]}
-              </button>
-            ))}
-          </FilterGroup>
-
-          <FilterGroup label="Size">
-            {sizeOptions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                aria-pressed={sizes.includes(s)}
-                onClick={() => setSizes((prev) => toggle(prev, s))}
-                className={`${chipBase} capitalize ${
-                  sizes.includes(s)
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-secondary/50 text-secondary-foreground"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </FilterGroup>
-
-          <FilterGroup label="Flavour">
-            {flavourOptions.map((f) => (
-              <button
-                key={f}
-                type="button"
-                aria-pressed={flavours.includes(f)}
-                onClick={() => setFlavours((prev) => toggle(prev, f))}
-                className={`${chipBase} inline-flex items-center gap-2 ${
-                  flavours.includes(f)
-                    ? `${flavourChipActive[f]} ring-2 ring-foreground/10`
-                    : "bg-secondary/50 text-secondary-foreground"
-                }`}
-              >
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ring-1 ring-foreground/15 ${flavourChipActive[f].split(" ")[0]}`}
-                  aria-hidden="true"
-                />
-                {flavourLabels[f]}
-              </button>
-            ))}
-          </FilterGroup>
-
-          <div className="mt-5 flex items-center justify-between gap-3">
-            <p
-              aria-live="polite"
-              className="text-xs font-semibold text-muted-foreground sm:text-sm"
-            >
-              {results.length} {results.length === 1 ? "product" : "products"}
-            </p>
-            <AnimatePresence initial={false}>
-              {hasFilters && (
-                <motion.button
-                  type="button"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.18, ease: EASE_OUT }}
-                  onClick={clear}
-                  className={`${chipBase} inline-flex items-center gap-1.5 bg-foreground/5 text-foreground`}
-                >
-                  <X className="h-3.5 w-3.5" aria-hidden="true" /> Clear filters
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((o) => !o)}
+            aria-expanded={filtersOpen}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-3 text-xs font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+          >
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            Filter
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${filtersOpen ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
         </div>
+
+        <p aria-live="polite" className="mt-3 text-xs font-semibold text-muted-foreground sm:text-sm">
+          {query.trim() !== "" && <span className="text-foreground">&ldquo;{query.trim()}&rdquo; — </span>}
+          {results.length} {results.length === 1 ? "result" : "results"}
+        </p>
+
+        <AnimatePresence initial={false}>
+          {filtersOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.18, ease: EASE_OUT }}
+              className="mt-3 origin-top rounded-3xl bg-card p-4 shadow-soft"
+            >
+              <FilterGroup label="Type">
+                {lineOptions.map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    aria-pressed={lines.includes(l)}
+                    onClick={() => setLines((prev) => toggle(prev, l))}
+                    className={`${chipBase} ${
+                      lines.includes(l)
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary/50 text-secondary-foreground"
+                    }`}
+                  >
+                    {lineLabels[l]}
+                  </button>
+                ))}
+              </FilterGroup>
+
+              <FilterGroup label="Size">
+                {sizeOptions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    aria-pressed={sizes.includes(s)}
+                    onClick={() => setSizes((prev) => toggle(prev, s))}
+                    className={`${chipBase} capitalize ${
+                      sizes.includes(s)
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-secondary/50 text-secondary-foreground"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </FilterGroup>
+
+              <FilterGroup label="Flavour">
+                {flavourOptions.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    aria-pressed={flavours.includes(f)}
+                    onClick={() => setFlavours((prev) => toggle(prev, f))}
+                    className={`${chipBase} inline-flex items-center gap-2 ${
+                      flavours.includes(f)
+                        ? `${flavourChipActive[f]} ring-2 ring-foreground/10`
+                        : "bg-secondary/50 text-secondary-foreground"
+                    }`}
+                  >
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ring-1 ring-foreground/15 ${flavourChipActive[f].split(" ")[0]}`}
+                      aria-hidden="true"
+                    />
+                    {flavourLabels[f]}
+                  </button>
+                ))}
+              </FilterGroup>
+
+              <AnimatePresence initial={false}>
+                {hasFilters && (
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.18, ease: EASE_OUT }}
+                    onClick={clear}
+                    className={`${chipBase} mt-4 inline-flex items-center gap-1.5 bg-foreground/5 text-foreground`}
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden="true" /> Clear filters
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
       {/* Grid */}
-      <section className="mx-auto mt-8 max-w-6xl px-5 sm:px-8">
+      <section className="mx-auto mt-6 max-w-6xl px-5 sm:px-8">
         {isLoading ? (
-          <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
             {Array.from({ length: 9 }).map((_, i) => (
               <ProductCardSkeleton key={i} />
             ))}
@@ -246,7 +268,7 @@ function MenuPage() {
               initial="hidden"
               animate="show"
               variants={staggerParent}
-              className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+              className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3"
             >
               <AnimatePresence initial={false}>
                 {results.map((p) => (
