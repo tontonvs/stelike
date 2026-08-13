@@ -31,8 +31,8 @@ export const Route = createFileRoute("/")({
 
 const stats = [
   { icon: Sparkles, label: "100% Probiotic" },
-  { icon: Leaf, label: "Low Fat" },
   { icon: Shield, label: "No Preservatives" },
+  { icon: Leaf, label: "Low Fat" },
   { icon: MapPin, label: "Made in Ghana" },
 ];
 
