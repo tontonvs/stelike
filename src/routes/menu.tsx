@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Search } from "lucide-react";
+import { X, Search, SlidersHorizontal, ChevronDown } from "lucide-react";
 import {
   lineLabels,
   flavourLabels,
@@ -61,6 +61,7 @@ function MenuPage() {
   const [sizes, setSizes] = useState<SizeOption[]>([]);
   const [flavours, setFlavours] = useState<Flavour[]>([]);
   const [active, setActive] = useState<Product | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Keeps the search box in sync if the navbar search is used again while
   // already on this page (the route doesn't remount, so state won't pick up
