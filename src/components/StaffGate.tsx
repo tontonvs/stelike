@@ -1,7 +1,10 @@
 import { useEffect, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { useStaffSession } from "@/hooks/useStaffSession";
 import { signOutStaff } from "@/lib/staffAuth";
+import { fadeUp, EASE_OUT } from "@/lib/motion";
 import type { StaffProfile } from "@/lib/staffAuth";
 
 /** Wraps any /staff/* page (except the login page itself). Handles the loading,
@@ -21,15 +24,26 @@ export function StaffGate({ children }: { children: (staff: StaffProfile) => Rea
 
   if (session.status === "loading" || session.status === "signed-out") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-hero-gradient">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2, ease: EASE_OUT }}
+        className="flex min-h-screen flex-col items-center justify-center gap-3 bg-hero-gradient"
+      >
+        <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
         <p className="text-sm text-muted-foreground">Loading…</p>
-      </div>
+      </motion.div>
     );
   }
 
   if (session.status === "unauthorized") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-hero-gradient px-5 text-center">
+      <motion.div
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        className="flex min-h-screen flex-col items-center justify-center gap-3 bg-hero-gradient px-5 text-center"
+      >
         <p className="font-display text-xl font-bold">Not authorized</p>
         <p className="max-w-xs text-sm text-muted-foreground">
           This account isn't set up as Yoglait staff. Contact an admin if you think this is a
@@ -42,12 +56,17 @@ export function StaffGate({ children }: { children: (staff: StaffProfile) => Rea
         >
           Sign out
         </button>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-hero-gradient">
+    <motion.div
+      variants={fadeUp}
+      initial="hidden"
+      animate="show"
+      className="min-h-screen bg-hero-gradient"
+    >
       <header className="flex items-center justify-between px-6 py-5">
         <div>
           <p className="font-display text-lg font-bold">Yoglait Staff</p>
@@ -64,6 +83,6 @@ export function StaffGate({ children }: { children: (staff: StaffProfile) => Rea
         </button>
       </header>
       <main className="px-6 pb-16">{children(session.staff)}</main>
-    </div>
+    </motion.div>
   );
 }

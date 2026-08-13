@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { signInStaff } from "@/lib/staffAuth";
+import { fadeUp } from "@/lib/motion";
 
 export const Route = createFileRoute("/staff-login")({
   ssr: false,
@@ -31,7 +34,10 @@ function StaffLoginPage() {
 
   return (
     <section className="flex min-h-screen items-center justify-center bg-hero-gradient px-5">
-      <form
+      <motion.form
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-4xl bg-card p-8 shadow-float"
       >
@@ -68,11 +74,12 @@ function StaffLoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-6 w-full rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-70"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-70"
         >
+          {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
           {loading ? "Signing in…" : "Sign in"}
         </button>
-      </form>
+      </motion.form>
     </section>
   );
 }

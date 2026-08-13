@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Loader2, Search } from "lucide-react";
+import { X, Search } from "lucide-react";
 import {
   lineLabels,
   flavourLabels,
@@ -12,6 +12,7 @@ import {
 } from "@/lib/products";
 import { useProducts } from "@/hooks/useProducts";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { ProductSheet } from "@/components/ProductSheet";
 import { fadeUp, staggerParent, EASE_OUT } from "@/lib/motion";
 
@@ -234,9 +235,11 @@ function MenuPage() {
       {/* Grid */}
       <section className="mx-auto mt-8 max-w-6xl px-5 sm:px-8">
         {isLoading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
-          </div>
+          <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </ul>
         ) : (
           <>
             <motion.ul

@@ -6,6 +6,7 @@ import heroImage from "@/assets/hero-yoglait.png";
 import { flavourChip, flavourLabels } from "@/lib/products";
 import { useProducts } from "@/hooks/useProducts";
 import { useCart } from "@/components/CartProvider";
+import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { fadeUp, staggerParent, viewportOnce, EASE_OUT } from "@/lib/motion";
 
 export const Route = createFileRoute("/")({
@@ -176,13 +177,7 @@ function Home() {
             className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
           >
             {isLoading
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <li
-                    key={i}
-                    aria-hidden="true"
-                    className="h-[340px] animate-pulse rounded-3xl bg-card/60 shadow-soft"
-                  />
-                ))
+              ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
               : (products ?? []).slice(0, 6).map((p) => (
                   <motion.li
                     key={p.id}

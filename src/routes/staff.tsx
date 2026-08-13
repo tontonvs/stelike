@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import { Loader2, MapPin, RefreshCcw, Send, Trash2, UserPlus } from "lucide-react";
 import {
   listOrders,
@@ -13,7 +14,48 @@ import { listRiders, addRider, removeRider, type Rider } from "@/lib/riders";
 import { isGpsAddress, gpsMapsUrl, extractLatLng, osmPreviewUrl } from "@/lib/address";
 import { buildWhatsAppLink, riderDeliveryMessage } from "@/lib/whatsapp";
 import { StaffGate } from "@/components/StaffGate";
+import { Skeleton } from "@/components/ui/skeleton";
+import { fadeUp, staggerParent, EASE_OUT } from "@/lib/motion";
 import type { StaffProfile } from "@/lib/staffAuth";
+
+function OrderCardSkeleton() {
+  return (
+    <li className="rounded-3xl bg-card p-5 shadow-soft" aria-hidden="true">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <Skeleton className="h-4 w-28 rounded-full" />
+          <Skeleton className="mt-2 h-3 w-40 rounded-full" />
+        </div>
+        <div className="flex gap-1.5">
+          <Skeleton className="h-5 w-14 rounded-full" />
+          <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
+      </div>
+      <Skeleton className="mt-3 h-3 w-2/3 rounded-full" />
+      <Skeleton className="mt-1.5 h-3 w-1/2 rounded-full" />
+      <Skeleton className="mt-3 h-14 w-full rounded-2xl" />
+      <div className="mt-3 flex items-center justify-between">
+        <Skeleton className="h-6 w-16 rounded-full" />
+        <Skeleton className="h-8 w-28 rounded-full" />
+      </div>
+    </li>
+  );
+}
+
+function ListRowSkeleton() {
+  return (
+    <li
+      className="flex items-center justify-between rounded-2xl bg-card px-4 py-3 shadow-soft"
+      aria-hidden="true"
+    >
+      <div>
+        <Skeleton className="h-4 w-28 rounded-full" />
+        <Skeleton className="mt-1.5 h-3 w-20 rounded-full" />
+      </div>
+      <Skeleton className="h-8 w-8 rounded-full" />
+    </li>
+  );
+}
 
 export const Route = createFileRoute("/staff")({
   ssr: false,
@@ -150,18 +192,29 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
       )}
 
       {orders === null ? (
-        <div className="mt-10 flex justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
-        </div>
+        <ul className="mt-6 flex flex-col gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <OrderCardSkeleton key={i} />
+          ))}
+        </ul>
       ) : orders.length === 0 ? (
         <p className="mt-10 text-center text-sm text-muted-foreground">No orders yet.</p>
       ) : (
-        <ul className="mt-6 flex flex-col gap-3">
+        <motion.ul
+          initial="hidden"
+          animate="show"
+          variants={staggerParent}
+          className="mt-6 flex flex-col gap-3"
+        >
           {orders.map((order) => {
             const coords = isGpsAddress(order.address) ? extractLatLng(order.address) : null;
 
             return (
-              <li key={order.id} className="rounded-3xl bg-card p-5 shadow-soft">
+              <motion.li
+                key={order.id}
+                variants={fadeUp}
+                className="rounded-3xl bg-card p-5 shadow-soft"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="font-display text-sm font-bold">{order.reference}</p>
@@ -303,10 +356,10 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                     )}
                   </div>
                 </div>
-              </li>
+              </motion.li>
             );
           })}
-        </ul>
+        </motion.ul>
       )}
     </div>
   );
@@ -453,14 +506,22 @@ function TeamPanel({ currentStaffId }: { currentStaffId: string }) {
         )}
 
         {staff === null ? (
-          <div className="mt-6 flex justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
-          </div>
-        ) : (
           <ul className="mt-3 flex flex-col gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <ListRowSkeleton key={i} />
+            ))}
+          </ul>
+        ) : (
+          <motion.ul
+            initial="hidden"
+            animate="show"
+            variants={staggerParent}
+            className="mt-3 flex flex-col gap-2"
+          >
             {staff.map((member) => (
-              <li
+              <motion.li
                 key={member.id}
+                variants={fadeUp}
                 className="flex items-center justify-between rounded-2xl bg-card px-4 py-3 shadow-soft"
               >
                 <div>
@@ -482,9 +543,9 @@ function TeamPanel({ currentStaffId }: { currentStaffId: string }) {
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>
                 )}
-              </li>
+              </motion.li>
             ))}
-          </ul>
+          </motion.ul>
         )}
       </div>
     </div>
@@ -589,16 +650,24 @@ function RidersPanel() {
         )}
 
         {riders === null ? (
-          <div className="mt-6 flex justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
-          </div>
+          <ul className="mt-3 flex flex-col gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <ListRowSkeleton key={i} />
+            ))}
+          </ul>
         ) : riders.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">No riders added yet.</p>
         ) : (
-          <ul className="mt-3 flex flex-col gap-2">
+          <motion.ul
+            initial="hidden"
+            animate="show"
+            variants={staggerParent}
+            className="mt-3 flex flex-col gap-2"
+          >
             {riders.map((rider) => (
-              <li
+              <motion.li
                 key={rider.id}
+                variants={fadeUp}
                 className="flex items-center justify-between rounded-2xl bg-card px-4 py-3 shadow-soft"
               >
                 <div>
@@ -614,9 +683,9 @@ function RidersPanel() {
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
-              </li>
+              </motion.li>
             ))}
-          </ul>
+          </motion.ul>
         )}
       </div>
     </div>
