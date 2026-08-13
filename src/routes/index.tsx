@@ -128,7 +128,7 @@ function Home() {
           whileInView="show"
           viewport={viewportOnce}
           variants={fadeUp}
-          className="relative grid grid-cols-2 gap-y-3 rounded-2xl border-[1.4px] border-primary bg-card px-5 py-4"
+          className="relative grid grid-flow-col grid-cols-2 grid-rows-2 gap-y-3 rounded-2xl border-[1.4px] border-primary bg-card px-5 py-4"
         >
           <span
             aria-hidden="true"
