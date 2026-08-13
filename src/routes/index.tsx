@@ -66,59 +66,45 @@ function Home() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-hero-gradient pb-28 pt-28 sm:pb-40 sm:pt-36">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 sm:px-8 md:grid-cols-2">
+      <section className="relative overflow-hidden bg-hero-gradient pb-20 pt-24 sm:pb-40 sm:pt-36">
+        <div className="mx-auto grid max-w-6xl items-center gap-6 px-5 sm:gap-10 sm:px-8 md:grid-cols-2">
           <motion.div initial="hidden" animate="show" variants={staggerParent}>
             <motion.span
               variants={fadeUp}
               className="inline-flex rounded-full bg-card/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur"
             >
-              Yoglait On The Go
+              Don't say yogurt... say YOGLAIT!
             </motion.span>
             <motion.h1
               variants={fadeUp}
-              className="mt-4 text-5xl font-bold leading-[1.05] sm:text-6xl lg:text-7xl"
+              className="mt-3 text-4xl font-bold leading-[1.05] sm:mt-4 sm:text-6xl lg:text-7xl"
             >
               Joy In A Cup
             </motion.h1>
             <motion.p
               variants={fadeUp}
-              className="mt-4 max-w-md text-base text-muted-foreground sm:text-lg"
+              className="mt-3 max-w-md text-sm text-muted-foreground sm:mt-4 sm:text-lg"
             >
-              Healthy probiotic yoghurt, made fresh and kept cold in Tema Community 1, Accra. Big
-              benefits. One smooth sip.
+              Healthy probiotic yoghurt, made fresh and kept cold in Accra. Big benefits. One
+              smooth sip.
             </motion.p>
-            <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
+            <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-3 sm:mt-8">
               <Link
                 to="/menu"
-                className="inline-flex items-center rounded-full bg-primary px-7 py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+                className="inline-flex items-center rounded-lg bg-primary px-7 py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
               >
                 Order Now
               </Link>
               <a
                 href="#flavours"
-                className="inline-flex items-center rounded-full bg-card px-7 py-3 text-sm font-bold text-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+                className="inline-flex items-center rounded-lg bg-card px-7 py-3 text-sm font-bold text-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
               >
                 See Flavours
               </a>
             </motion.div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, ease: EASE_OUT }}
-            className="relative mx-auto w-full max-w-sm"
-          >
-            <img
-              src={heroImage}
-              alt="Yoglait drinking yoghurt pouch and probiotic tub"
-              width={1024}
-              height={1024}
-              fetchPriority="high"
-              className="w-full drop-shadow-[0_28px_35px_rgba(23,50,77,0.25)]"
-            />
-          </motion.div>
+          <HeroCarousel />
         </div>
 
         {/* Wavy dune divider */}
@@ -135,27 +121,28 @@ function Home() {
         </svg>
       </section>
 
-      {/* Stat strip */}
-      <section className="mx-auto -mt-4 max-w-5xl px-5 sm:px-8">
-        <motion.ul
+      {/* Stat panel */}
+      <section className="mx-auto -mt-2 max-w-5xl px-5 sm:px-8">
+        <motion.div
           initial="hidden"
           whileInView="show"
           viewport={viewportOnce}
-          variants={staggerParent}
-          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+          variants={fadeUp}
+          className="relative grid grid-cols-2 gap-y-3 rounded-2xl border-[1.4px] border-primary bg-card px-5 py-4"
         >
+          <span
+            aria-hidden="true"
+            className="absolute inset-y-3 left-1/2 w-px -translate-x-1/2 bg-foreground/30"
+          />
           {stats.map((s) => (
-            <motion.li
-              key={s.label}
-              variants={fadeUp}
-              className="flex items-center gap-2 rounded-full bg-card px-4 py-3 shadow-soft"
-            >
+            <div key={s.label} className="flex items-center gap-2 pr-3">
               <s.icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
               <span className="truncate text-xs font-semibold sm:text-sm">{s.label}</span>
-            </motion.li>
+            </div>
           ))}
-        </motion.ul>
+        </motion.div>
       </section>
+
 
       {/* Flavours */}
       <section id="flavours" className="mx-auto mt-20 max-w-6xl px-5 sm:px-8">
