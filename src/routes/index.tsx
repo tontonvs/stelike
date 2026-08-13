@@ -161,7 +161,7 @@ function Home() {
 
           <motion.ul
             variants={staggerParent}
-            className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            className="mt-8 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3"
           >
             {isLoading
               ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
@@ -169,16 +169,16 @@ function Home() {
                   <motion.li
                     key={p.id}
                     variants={fadeUp}
-                    whileHover={{ y: -6, scale: 1.02 }}
+                    whileHover={{ y: -4, scale: 1.01 }}
                     transition={{ duration: 0.18, ease: EASE_OUT }}
-                    className="relative flex flex-col rounded-3xl bg-card p-5 shadow-soft"
+                    className="relative flex flex-col rounded-2xl bg-card p-3 shadow-sm sm:p-4"
                   >
                     {p.badges.includes("NEW") && (
-                      <span className="absolute right-4 top-4 rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase text-accent-foreground">
+                      <span className="absolute right-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase text-accent-foreground">
                         New
                       </span>
                     )}
-                    <div className="grid h-44 place-items-center rounded-2xl bg-secondary/40">
+                    <div className="grid h-28 place-items-center rounded-xl bg-secondary/40 sm:h-36">
                       <img
                         src={p.image}
                         alt={`${p.name} — ${flavourLabels[p.flavour]} yoghurt`}
@@ -186,26 +186,28 @@ function Home() {
                         height={768}
                         loading="lazy"
                         decoding="async"
-                        className="h-40 w-auto object-contain"
+                        className="h-24 w-auto object-contain sm:h-32"
                       />
                     </div>
-                    <div className="mt-4 flex min-w-0 items-center gap-2">
+                    <div className="mt-2 flex min-w-0 items-center gap-1.5">
                       <span
-                        className={`h-3 w-3 shrink-0 rounded-full ring-1 ring-border ${flavourChip[p.flavour]}`}
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-border ${flavourChip[p.flavour]}`}
                         aria-hidden="true"
                       />
-                      <span className="text-xs font-medium text-muted-foreground">
+                      <span className="truncate text-[11px] font-medium text-muted-foreground">
                         {flavourLabels[p.flavour]}
                       </span>
                     </div>
-                    <h3 className="mt-1 truncate text-lg font-semibold">{p.name}</h3>
-                    <p className="text-xs text-muted-foreground">{p.size}</p>
-                    <div className="mt-4 flex items-center justify-between gap-3">
-                      <span className="font-display text-lg font-bold">GH₵ {p.price}</span>
+                    <h3 className="mt-0.5 truncate text-sm font-semibold sm:text-base">{p.name}</h3>
+                    <p className="text-[11px] text-muted-foreground">{p.size}</p>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <span className="font-display text-sm font-bold sm:text-base">
+                        GH₵ {p.price}
+                      </span>
                       <button
                         type="button"
                         onClick={() => addItem(p.id)}
-                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+                        className="rounded-full bg-primary px-3.5 py-1.5 text-[11px] font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 sm:px-5 sm:py-2 sm:text-xs"
                       >
                         Order
                       </button>
