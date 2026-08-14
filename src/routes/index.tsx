@@ -134,8 +134,11 @@ function Home() {
             aria-hidden="true"
             className="absolute inset-y-3 left-1/2 w-px -translate-x-1/2 bg-foreground/30"
           />
-          {stats.map((s) => (
-            <div key={s.label} className="flex items-center gap-2 pr-3">
+          {stats.map((s, i) => (
+            <div
+              key={s.label}
+              className={`flex items-center gap-2 ${i < 2 ? "pr-5" : "pl-5"}`}
+            >
               <s.icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
               <span className="truncate text-xs font-semibold sm:text-sm">{s.label}</span>
             </div>
