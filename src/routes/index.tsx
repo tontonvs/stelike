@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { Leaf, Shield, Sparkles, HeartPulse, Droplets, Snowflake, MapPin } from "lucide-react";
-import heroImage from "@/assets/hero-yoglait.png";
 import { flavourChip, flavourLabels } from "@/lib/products";
 import { useProducts } from "@/hooks/useProducts";
 import { useCart } from "@/components/CartProvider";
+import { HeroCarousel } from "@/components/HeroCarousel";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { fadeUp, staggerParent, viewportOnce, EASE_OUT } from "@/lib/motion";
 
@@ -31,8 +31,8 @@ export const Route = createFileRoute("/")({
 
 const stats = [
   { icon: Sparkles, label: "100% Probiotic" },
-  { icon: Leaf, label: "Low Fat" },
   { icon: Shield, label: "No Preservatives" },
+  { icon: Leaf, label: "Low Fat" },
   { icon: MapPin, label: "Made in Ghana" },
 ];
 
@@ -66,59 +66,45 @@ function Home() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-hero-gradient pb-28 pt-28 sm:pb-40 sm:pt-36">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 sm:px-8 md:grid-cols-2">
+      <section className="relative overflow-hidden bg-hero-gradient pb-20 pt-24 sm:pb-40 sm:pt-36">
+        <div className="mx-auto grid max-w-6xl items-center gap-6 px-5 sm:gap-10 sm:px-8 md:grid-cols-2">
           <motion.div initial="hidden" animate="show" variants={staggerParent}>
             <motion.span
               variants={fadeUp}
               className="inline-flex rounded-full bg-card/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur"
             >
-              Yoglait On The Go
+              Don't say yogurt... say YOGLAIT!
             </motion.span>
             <motion.h1
               variants={fadeUp}
-              className="mt-4 text-5xl font-bold leading-[1.05] sm:text-6xl lg:text-7xl"
+              className="mt-3 text-4xl font-bold leading-[1.05] sm:mt-4 sm:text-6xl lg:text-7xl"
             >
               Joy In A Cup
             </motion.h1>
             <motion.p
               variants={fadeUp}
-              className="mt-4 max-w-md text-base text-muted-foreground sm:text-lg"
+              className="mt-3 max-w-md text-sm text-muted-foreground sm:mt-4 sm:text-lg"
             >
-              Healthy probiotic yoghurt, made fresh and kept cold in Tema Community 1, Accra. Big
-              benefits. One smooth sip.
+              Healthy probiotic yoghurt, made fresh and kept cold in Accra. Big benefits. One
+              smooth sip.
             </motion.p>
-            <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
+            <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-3 sm:mt-8">
               <Link
                 to="/menu"
-                className="inline-flex items-center rounded-full bg-primary px-7 py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+                className="inline-flex items-center rounded-lg bg-primary px-7 py-3 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
               >
                 Order Now
               </Link>
               <a
                 href="#flavours"
-                className="inline-flex items-center rounded-full bg-card px-7 py-3 text-sm font-bold text-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+                className="inline-flex items-center rounded-lg bg-card px-7 py-3 text-sm font-bold text-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
               >
                 See Flavours
               </a>
             </motion.div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, ease: EASE_OUT }}
-            className="relative mx-auto w-full max-w-sm"
-          >
-            <img
-              src={heroImage}
-              alt="Yoglait drinking yoghurt pouch and probiotic tub"
-              width={1024}
-              height={1024}
-              fetchPriority="high"
-              className="w-full drop-shadow-[0_28px_35px_rgba(23,50,77,0.25)]"
-            />
-          </motion.div>
+          <HeroCarousel />
         </div>
 
         {/* Wavy dune divider */}
@@ -135,27 +121,28 @@ function Home() {
         </svg>
       </section>
 
-      {/* Stat strip */}
-      <section className="mx-auto -mt-4 max-w-5xl px-5 sm:px-8">
-        <motion.ul
+      {/* Stat panel */}
+      <section className="mx-auto -mt-2 max-w-5xl px-5 sm:px-8">
+        <motion.div
           initial="hidden"
           whileInView="show"
           viewport={viewportOnce}
-          variants={staggerParent}
-          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+          variants={fadeUp}
+          className="relative grid grid-flow-col grid-cols-2 grid-rows-2 gap-y-3 rounded-2xl border-[1.4px] border-primary bg-card px-5 py-4"
         >
+          <span
+            aria-hidden="true"
+            className="absolute inset-y-3 left-1/2 w-px -translate-x-1/2 bg-foreground/30"
+          />
           {stats.map((s) => (
-            <motion.li
-              key={s.label}
-              variants={fadeUp}
-              className="flex items-center gap-2 rounded-full bg-card px-4 py-3 shadow-soft"
-            >
+            <div key={s.label} className="flex items-center gap-2 pr-3">
               <s.icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
               <span className="truncate text-xs font-semibold sm:text-sm">{s.label}</span>
-            </motion.li>
+            </div>
           ))}
-        </motion.ul>
+        </motion.div>
       </section>
+
 
       {/* Flavours */}
       <section id="flavours" className="mx-auto mt-20 max-w-6xl px-5 sm:px-8">
@@ -174,7 +161,7 @@ function Home() {
 
           <motion.ul
             variants={staggerParent}
-            className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            className="mt-8 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3"
           >
             {isLoading
               ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
@@ -182,16 +169,16 @@ function Home() {
                   <motion.li
                     key={p.id}
                     variants={fadeUp}
-                    whileHover={{ y: -6, scale: 1.02 }}
+                    whileHover={{ y: -4, scale: 1.01 }}
                     transition={{ duration: 0.18, ease: EASE_OUT }}
-                    className="relative flex flex-col rounded-3xl bg-card p-5 shadow-soft"
+                    className="relative flex flex-col rounded-2xl bg-card p-3 shadow-sm sm:p-4"
                   >
                     {p.badges.includes("NEW") && (
-                      <span className="absolute right-4 top-4 rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase text-accent-foreground">
+                      <span className="absolute right-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase text-accent-foreground">
                         New
                       </span>
                     )}
-                    <div className="grid h-44 place-items-center rounded-2xl bg-secondary/40">
+                    <div className="grid h-28 place-items-center rounded-xl bg-secondary/40 sm:h-36">
                       <img
                         src={p.image}
                         alt={`${p.name} — ${flavourLabels[p.flavour]} yoghurt`}
@@ -199,26 +186,28 @@ function Home() {
                         height={768}
                         loading="lazy"
                         decoding="async"
-                        className="h-40 w-auto object-contain"
+                        className="h-24 w-auto object-contain sm:h-32"
                       />
                     </div>
-                    <div className="mt-4 flex min-w-0 items-center gap-2">
+                    <div className="mt-2 flex min-w-0 items-center gap-1.5">
                       <span
-                        className={`h-3 w-3 shrink-0 rounded-full ring-1 ring-border ${flavourChip[p.flavour]}`}
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-border ${flavourChip[p.flavour]}`}
                         aria-hidden="true"
                       />
-                      <span className="text-xs font-medium text-muted-foreground">
+                      <span className="truncate text-[11px] font-medium text-muted-foreground">
                         {flavourLabels[p.flavour]}
                       </span>
                     </div>
-                    <h3 className="mt-1 truncate text-lg font-semibold">{p.name}</h3>
-                    <p className="text-xs text-muted-foreground">{p.size}</p>
-                    <div className="mt-4 flex items-center justify-between gap-3">
-                      <span className="font-display text-lg font-bold">GH₵ {p.price}</span>
+                    <h3 className="mt-0.5 truncate text-sm font-semibold sm:text-base">{p.name}</h3>
+                    <p className="text-[11px] text-muted-foreground">{p.size}</p>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <span className="font-display text-sm font-bold sm:text-base">
+                        GH₵ {p.price}
+                      </span>
                       <button
                         type="button"
                         onClick={() => addItem(p.id)}
-                        className="rounded-full bg-primary px-5 py-2 text-xs font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+                        className="rounded-full bg-primary px-3.5 py-1.5 text-[11px] font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 sm:px-5 sm:py-2 sm:text-xs"
                       >
                         Order
                       </button>

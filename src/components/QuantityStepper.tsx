@@ -27,7 +27,7 @@ export function QuantityStepper({ onAdd, label = "Buy", size = "sm" }: Props) {
       setOpen(false);
       setQty(1);
       setRaw("1");
-    }, 1400);
+    }, 3500);
   };
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -39,7 +39,7 @@ export function QuantityStepper({ onAdd, label = "Buy", size = "sm" }: Props) {
     scheduleConfirm(next);
   };
 
-  const pad = size === "md" ? "px-6 py-3 text-sm" : "px-5 py-2 text-xs";
+  const pad = size === "md" ? "px-5 py-2.5 text-sm" : "px-5 py-2 text-xs";
 
   return (
     <div className="relative">

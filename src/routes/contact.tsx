@@ -200,20 +200,36 @@ function ContactPage() {
             Find us
           </motion.h2>
 
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={viewportOnce}
+            variants={fadeUp}
+            className="mt-6 flex justify-center"
+          >
+            <a
+              href="https://www.google.com/maps/search/Melcom+Accra+Ghana"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex w-full max-w-md items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-4 text-base font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-[1.02] active:scale-95"
+            >
+              <MapPin className="h-5 w-5" aria-hidden="true" /> Find a store near you
+            </a>
+          </motion.div>
+
           <motion.ul
             initial="hidden"
             whileInView="show"
             viewport={viewportOnce}
             variants={staggerParent}
-            className="mt-8 grid gap-3 sm:grid-cols-2"
+            className="mx-auto mt-6 max-w-md space-y-2 text-center sm:columns-2 sm:space-y-0 sm:text-left"
           >
             {stockists.map((s) => (
               <motion.li
                 key={s}
                 variants={fadeUp}
-                className="flex items-center gap-3 rounded-2xl bg-card px-4 py-3 text-sm font-medium shadow-soft"
+                className="py-1 text-sm font-medium text-muted-foreground"
               >
-                <MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                 {s}
               </motion.li>
             ))}
