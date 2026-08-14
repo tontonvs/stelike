@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 export type StaffRole = "admin" | "sub_admin";
@@ -60,7 +61,20 @@ export async function createSubAdmin(input: {
     { body: input },
   );
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    // supabase-js's error.message for a failed function call is just a generic
+    // "Edge Function returned a non-2xx status code" — the actual reason is in
+    // the response body itself, which has to be pulled out separately.
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const body = await error.context.json();
+        throw new Error(typeof body?.error === "string" ? body.error : error.message);
+      } catch {
+        throw new Error(error.message);
+      }
+    }
+    throw new Error(error.message);
+  }
   if (data && "error" in data) throw new Error(data.error);
   if (!data) throw new Error("No response from create-staff.");
   return data;
