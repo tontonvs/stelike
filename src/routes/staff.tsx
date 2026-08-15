@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { motion } from "framer-motion";
-import { Loader2, MapPin, RefreshCcw, Send, Trash2, UserPlus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Check,
+  CheckCircle2,
+  Loader2,
+  MapPin,
+  PackageCheck,
+  RefreshCcw,
+  Send,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import {
   listOrders,
   confirmPaymentManually,
@@ -15,8 +25,22 @@ import { isGpsAddress, gpsMapsUrl, extractLatLng, osmPreviewUrl } from "@/lib/ad
 import { buildWhatsAppLink, riderDeliveryMessage } from "@/lib/whatsapp";
 import { StaffGate } from "@/components/StaffGate";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/lib/supabase";
 import { fadeUp, staggerParent, EASE_OUT } from "@/lib/motion";
 import type { StaffProfile } from "@/lib/staffAuth";
+
+/** Today: just the time. Anything older: date + time, so a glance at the
+ * card tells you "is this fresh or has it been sitting a while" without
+ * doing date math in your head. */
+function formatOrderTimestamp(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const time = date.toLocaleTimeString("en-GH", { hour: "numeric", minute: "2-digit" });
+  if (isToday) return time;
+  const dateStr = date.toLocaleDateString("en-GH", { day: "numeric", month: "short" });
+  return `${dateStr} · ${time}`;
+}
 
 function OrderCardSkeleton() {
   return (
@@ -132,11 +156,13 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
   const [staffMembers, setStaffMembers] = useState<StaffProfile[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [justDeliveredId, setJustDeliveredId] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
 
   const now = new Date();
-  const [filterYear, setFilterYear] = useState<number | "all">(now.getFullYear());
-  const [filterMonth, setFilterMonth] = useState<number | "all">(now.getMonth());
+  const [showHistory, setShowHistory] = useState(false);
+  const [filterYear, setFilterYear] = useState<number | "all">("all");
+  const [filterMonth, setFilterMonth] = useState<number | "all">("all");
   const [filterStaffId, setFilterStaffId] = useState<string | "all">("all");
 
   const load = async () => {
@@ -159,6 +185,22 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
     load();
   }, []);
 
+  // Live refresh: push-based via Supabase Realtime rather than polling — any
+  // insert/update on orders (a new order, a webhook confirming payment, another
+  // staff member acting) refreshes this view immediately, not on a timer delay.
+  useEffect(() => {
+    const channel = supabase
+      .channel("staff-orders-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        load();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const staffNameById = useMemo(
     () => new Map(staffMembers.map((s) => [s.id, s.name])),
     [staffMembers],
@@ -171,8 +213,17 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders]);
 
+  const twoWeeksAgo = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return d;
+  }, []);
+
   const filteredOrders = useMemo(() => {
     if (!orders) return null;
+    if (!showHistory) {
+      return orders.filter((o) => new Date(o.created_at) >= twoWeeksAgo);
+    }
     return orders.filter((o) => {
       const d = new Date(o.created_at);
       if (filterYear !== "all" && d.getFullYear() !== filterYear) return false;
@@ -185,7 +236,7 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
         return false;
       return true;
     });
-  }, [orders, filterYear, filterMonth, filterStaffId]);
+  }, [orders, showHistory, twoWeeksAgo, filterYear, filterMonth, filterStaffId]);
 
   const handleConfirmPayment = async (order: OrderRow) => {
     setBusyId(order.id);
@@ -201,11 +252,18 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
 
   const handleMarkDelivered = async (order: OrderRow) => {
     setBusyId(order.id);
+    setJustDeliveredId(order.id);
     try {
-      await markDelivered(order.id, staff.id);
+      // Let the checkmark animation actually be seen before the list reloads
+      // and the button disappears (delivery_status flips, hiding it).
+      await Promise.all([
+        markDelivered(order.id, staff.id),
+        new Promise((r) => setTimeout(r, 700)),
+      ]);
       await load();
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Could not mark delivered.");
+      setJustDeliveredId(null);
     } finally {
       setBusyId(null);
     }
@@ -239,61 +297,88 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
         </button>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <select
-          value={filterMonth}
-          onChange={(e) =>
-            setFilterMonth(e.target.value === "all" ? "all" : Number(e.target.value))
-          }
-          className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft outline-none"
+      <div className="mt-3 flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {showHistory ? "Browsing order history" : "Showing the last 2 weeks"}
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowHistory((v) => !v)}
+          className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors duration-150 ${
+            showHistory
+              ? "bg-primary text-primary-foreground"
+              : "bg-card text-muted-foreground shadow-soft"
+          }`}
         >
-          <option value="all">All months</option>
-          {MONTHS.map((m, i) => (
-            <option key={m} value={i}>
-              {m}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filterYear}
-          onChange={(e) => setFilterYear(e.target.value === "all" ? "all" : Number(e.target.value))}
-          className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft outline-none"
-        >
-          <option value="all">All years</option>
-          {availableYears.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filterStaffId}
-          onChange={(e) => setFilterStaffId(e.target.value)}
-          className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft outline-none"
-        >
-          <option value="all">Any staff</option>
-          {staffMembers.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        {(filterMonth !== now.getMonth() ||
-          filterYear !== now.getFullYear() ||
-          filterStaffId !== "all") && (
-          <button
-            type="button"
-            onClick={() => {
-              setFilterMonth(now.getMonth());
-              setFilterYear(now.getFullYear());
-              setFilterStaffId("all");
-            }}
-            className="text-xs font-semibold text-muted-foreground underline"
-          >
-            Reset to this month
-          </button>
-        )}
+          {showHistory ? "Back to recent" : "History"}
+        </button>
       </div>
+
+      <AnimatePresence initial={false}>
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: EASE_OUT }}
+            className="mt-3 flex flex-wrap items-center gap-2"
+          >
+            <select
+              value={filterMonth}
+              onChange={(e) =>
+                setFilterMonth(e.target.value === "all" ? "all" : Number(e.target.value))
+              }
+              className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft outline-none"
+            >
+              <option value="all">All months</option>
+              {MONTHS.map((m, i) => (
+                <option key={m} value={i}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filterYear}
+              onChange={(e) =>
+                setFilterYear(e.target.value === "all" ? "all" : Number(e.target.value))
+              }
+              className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft outline-none"
+            >
+              <option value="all">All years</option>
+              {availableYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filterStaffId}
+              onChange={(e) => setFilterStaffId(e.target.value)}
+              className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft outline-none"
+            >
+              <option value="all">Any staff</option>
+              {staffMembers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            {(filterMonth !== "all" || filterYear !== "all" || filterStaffId !== "all") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterMonth("all");
+                  setFilterYear("all");
+                  setFilterStaffId("all");
+                }}
+                className="text-xs font-semibold text-muted-foreground underline"
+              >
+                Clear filters
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {loadError && (
         <p className="mt-4 rounded-2xl bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive">
@@ -329,7 +414,12 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="font-display text-sm font-bold">{order.reference}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-display text-sm font-bold">{order.reference}</p>
+                      <span className="text-[11px] text-muted-foreground">
+                        · {formatOrderTimestamp(order.created_at)}
+                      </span>
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {order.customer_name} · {order.customer_phone}
                     </p>
@@ -464,7 +554,7 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                   )}
                 </div>
 
-                <div className="mt-3 flex items-center justify-between">
+                <div className="mt-4 flex items-center justify-between gap-3">
                   <p className="font-display text-base font-bold">GH₵ {order.total}</p>
                   <div className="flex gap-2">
                     {order.payment_status !== "paid" && (
@@ -472,8 +562,9 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                         type="button"
                         disabled={busyId === order.id}
                         onClick={() => handleConfirmPayment(order)}
-                        className="rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground disabled:opacity-60"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-60"
                       >
+                        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                         Confirm payment
                       </button>
                     )}
@@ -482,9 +573,40 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                         type="button"
                         disabled={busyId === order.id}
                         onClick={() => handleMarkDelivered(order)}
-                        className="rounded-full bg-secondary px-3.5 py-1.5 text-xs font-bold text-secondary-foreground disabled:opacity-60"
+                        className="relative inline-flex items-center gap-1.5 overflow-hidden rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-90"
                       >
-                        Mark delivered
+                        <AnimatePresence mode="wait" initial={false}>
+                          {justDeliveredId === order.id ? (
+                            <motion.span
+                              key="done"
+                              initial={{ opacity: 0, scale: 0.7 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.25, ease: EASE_OUT }}
+                              className="inline-flex items-center gap-1.5"
+                            >
+                              <motion.span
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ duration: 0.35, ease: EASE_OUT, delay: 0.05 }}
+                              >
+                                <Check className="h-4 w-4" aria-hidden="true" />
+                              </motion.span>
+                              Delivered!
+                            </motion.span>
+                          ) : (
+                            <motion.span
+                              key="idle"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="inline-flex items-center gap-1.5"
+                            >
+                              <PackageCheck className="h-4 w-4" aria-hidden="true" />
+                              Mark delivered
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
                       </button>
                     )}
                   </div>

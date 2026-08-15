@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useStaffSession } from "@/hooks/useStaffSession";
 import { signOutStaff } from "@/lib/staffAuth";
@@ -15,12 +16,28 @@ import type { StaffProfile } from "@/lib/staffAuth";
 export function StaffGate({ children }: { children: (staff: StaffProfile) => ReactNode }) {
   const session = useStaffSession();
   const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     if (session.status === "signed-out") {
       navigate({ to: "/staff-login" });
     }
   }, [session.status, navigate]);
+
+  // Explicit navigation after sign-out completes, rather than relying solely
+  // on the reactive session listener to eventually notice and redirect —
+  // gives immediate feedback and doesn't leave the button feeling dead if
+  // that listener is ever slow to fire.
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOutStaff();
+      navigate({ to: "/staff-login" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not sign out.");
+      setSigningOut(false);
+    }
+  };
 
   if (session.status === "loading" || session.status === "signed-out") {
     return (
@@ -51,10 +68,12 @@ export function StaffGate({ children }: { children: (staff: StaffProfile) => Rea
         </p>
         <button
           type="button"
-          onClick={() => signOutStaff()}
-          className="mt-2 rounded-full bg-secondary px-5 py-2.5 text-sm font-semibold text-secondary-foreground transition-transform duration-200 hover:scale-105 active:scale-95"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-secondary px-5 py-2.5 text-sm font-semibold text-secondary-foreground transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-70"
         >
-          Sign out
+          {signingOut && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+          {signingOut ? "Signing out…" : "Sign out"}
         </button>
       </motion.div>
     );
@@ -76,10 +95,12 @@ export function StaffGate({ children }: { children: (staff: StaffProfile) => Rea
         </div>
         <button
           type="button"
-          onClick={() => signOutStaff()}
-          className="rounded-full bg-card px-4 py-2 text-xs font-semibold shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="inline-flex items-center gap-1.5 rounded-full bg-card px-4 py-2 text-xs font-semibold shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-70"
         >
-          Sign out
+          {signingOut && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+          {signingOut ? "Signing out…" : "Sign out"}
         </button>
       </header>
       <main className="px-6 pb-16">{children(session.staff)}</main>

@@ -10,7 +10,8 @@ export async function signInStaff(email: string, password: string): Promise<void
 }
 
 export async function signOutStaff(): Promise<void> {
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) throw new Error(error.message);
 }
 
 /** Returns the logged-in Supabase Auth user's staff profile, or null if they're
