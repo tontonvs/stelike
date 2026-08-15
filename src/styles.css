@@ -87,8 +87,8 @@
   --flavour-pineapple: oklch(0.87 0.16 92);
 
   --gradient-hero: linear-gradient(180deg, var(--sky) 0%, oklch(0.94 0.03 220) 55%, var(--cream) 100%);
-  --shadow-float: 0 18px 40px -18px oklch(0.32 0.062 250 / 0.35);
-  --shadow-soft: 0 10px 24px -14px oklch(0.32 0.062 250 / 0.4);
+  --shadow-float: 0 14px 30px -18px oklch(0.32 0.062 250 / 0.25);
+  --shadow-soft: 0 6px 16px -12px oklch(0.32 0.062 250 / 0.28);
 }
 
 @utility bg-hero-gradient {

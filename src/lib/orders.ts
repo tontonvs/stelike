@@ -19,6 +19,8 @@ export type OrderRow = {
   delivery_status: "processing" | "out_for_delivery" | "delivered";
   rider_name: string | null;
   rider_phone: string | null;
+  confirmed_by: string | null;
+  delivered_by: string | null;
   created_at: string;
   paid_at: string | null;
   delivered_at: string | null;

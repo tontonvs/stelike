@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Loader2, MapPin, RefreshCcw, Send, Trash2, UserPlus } from "lucide-react";
@@ -9,7 +9,7 @@ import {
   assignRider,
   type OrderRow,
 } from "@/lib/orders";
-import { listStaff, removeStaff, createSubAdmin } from "@/lib/staffAuth";
+import { listStaff, createSubAdmin } from "@/lib/staffAuth";
 import { listRiders, addRider, removeRider, type Rider } from "@/lib/riders";
 import { isGpsAddress, gpsMapsUrl, extractLatLng, osmPreviewUrl } from "@/lib/address";
 import { buildWhatsAppLink, riderDeliveryMessage } from "@/lib/whatsapp";
@@ -111,19 +111,45 @@ function TabButton({
   );
 }
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 function OrdersPanel({ staff }: { staff: StaffProfile }) {
   const [orders, setOrders] = useState<OrderRow[] | null>(null);
   const [riders, setRiders] = useState<Rider[]>([]);
+  const [staffMembers, setStaffMembers] = useState<StaffProfile[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
 
+  const now = new Date();
+  const [filterYear, setFilterYear] = useState<number | "all">(now.getFullYear());
+  const [filterMonth, setFilterMonth] = useState<number | "all">(now.getMonth());
+  const [filterStaffId, setFilterStaffId] = useState<string | "all">("all");
+
   const load = async () => {
     setLoadError(null);
     try {
-      const [ordersResult, ridersResult] = await Promise.all([listOrders(), listRiders()]);
+      const [ordersResult, ridersResult, staffResult] = await Promise.all([
+        listOrders(),
+        listRiders(),
+        listStaff(),
+      ]);
       setOrders(ordersResult);
       setRiders(ridersResult.filter((r) => r.active));
+      setStaffMembers(staffResult);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Could not load orders.");
     }
@@ -132,6 +158,34 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
   useEffect(() => {
     load();
   }, []);
+
+  const staffNameById = useMemo(
+    () => new Map(staffMembers.map((s) => [s.id, s.name])),
+    [staffMembers],
+  );
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>([now.getFullYear()]);
+    (orders ?? []).forEach((o) => years.add(new Date(o.created_at).getFullYear()));
+    return Array.from(years).sort((a, b) => b - a);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders]);
+
+  const filteredOrders = useMemo(() => {
+    if (!orders) return null;
+    return orders.filter((o) => {
+      const d = new Date(o.created_at);
+      if (filterYear !== "all" && d.getFullYear() !== filterYear) return false;
+      if (filterMonth !== "all" && d.getMonth() !== filterMonth) return false;
+      if (
+        filterStaffId !== "all" &&
+        o.confirmed_by !== filterStaffId &&
+        o.delivered_by !== filterStaffId
+      )
+        return false;
+      return true;
+    });
+  }, [orders, filterYear, filterMonth, filterStaffId]);
 
   const handleConfirmPayment = async (order: OrderRow) => {
     setBusyId(order.id);
@@ -185,20 +239,78 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
         </button>
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <select
+          value={filterMonth}
+          onChange={(e) =>
+            setFilterMonth(e.target.value === "all" ? "all" : Number(e.target.value))
+          }
+          className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft outline-none"
+        >
+          <option value="all">All months</option>
+          {MONTHS.map((m, i) => (
+            <option key={m} value={i}>
+              {m}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filterYear}
+          onChange={(e) => setFilterYear(e.target.value === "all" ? "all" : Number(e.target.value))}
+          className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft outline-none"
+        >
+          <option value="all">All years</option>
+          {availableYears.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+        <select
+          value={filterStaffId}
+          onChange={(e) => setFilterStaffId(e.target.value)}
+          className="rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft outline-none"
+        >
+          <option value="all">Any staff</option>
+          {staffMembers.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+        {(filterMonth !== now.getMonth() ||
+          filterYear !== now.getFullYear() ||
+          filterStaffId !== "all") && (
+          <button
+            type="button"
+            onClick={() => {
+              setFilterMonth(now.getMonth());
+              setFilterYear(now.getFullYear());
+              setFilterStaffId("all");
+            }}
+            className="text-xs font-semibold text-muted-foreground underline"
+          >
+            Reset to this month
+          </button>
+        )}
+      </div>
+
       {loadError && (
         <p className="mt-4 rounded-2xl bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive">
           {loadError}
         </p>
       )}
 
-      {orders === null ? (
+      {filteredOrders === null ? (
         <ul className="mt-6 flex flex-col gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <OrderCardSkeleton key={i} />
           ))}
         </ul>
-      ) : orders.length === 0 ? (
-        <p className="mt-10 text-center text-sm text-muted-foreground">No orders yet.</p>
+      ) : filteredOrders.length === 0 ? (
+        <p className="mt-10 text-center text-sm text-muted-foreground">
+          No orders match this filter.
+        </p>
       ) : (
         <motion.ul
           initial="hidden"
@@ -206,7 +318,7 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
           variants={staggerParent}
           className="mt-6 flex flex-col gap-3"
         >
-          {orders.map((order) => {
+          {filteredOrders.map((order) => {
             const coords = isGpsAddress(order.address) ? extractLatLng(order.address) : null;
 
             return (
@@ -240,6 +352,27 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                     />
                   </div>
                 </div>
+
+                {(order.confirmed_by || order.delivered_by) && (
+                  <div className="mt-1.5 flex flex-col gap-0.5">
+                    {order.confirmed_by && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Payment confirmed by{" "}
+                        <span className="font-semibold text-foreground">
+                          {staffNameById.get(order.confirmed_by) ?? "a staff member"}
+                        </span>
+                      </p>
+                    )}
+                    {order.delivered_by && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Delivered by{" "}
+                        <span className="font-semibold text-foreground">
+                          {staffNameById.get(order.delivered_by) ?? "a staff member"}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {coords && (
                   <div className="mt-3 overflow-hidden rounded-2xl border border-border">
@@ -387,10 +520,12 @@ function StatusBadge({
   );
 }
 
+import { RemoveStaffDialog } from "@/components/RemoveStaffDialog";
+
 function TeamPanel({ currentStaffId }: { currentStaffId: string }) {
   const [staff, setStaff] = useState<StaffProfile[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [removingMember, setRemovingMember] = useState<StaffProfile | null>(null);
 
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [inviting, setInviting] = useState(false);
@@ -410,18 +545,8 @@ function TeamPanel({ currentStaffId }: { currentStaffId: string }) {
     load();
   }, []);
 
-  const handleRemove = async (member: StaffProfile) => {
-    if (!window.confirm(`Remove ${member.name} as staff? They'll lose dashboard access.`)) return;
-    setBusyId(member.id);
-    try {
-      await removeStaff(member.id);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Could not remove staff.");
-    } finally {
-      setBusyId(null);
-    }
-  };
+  const admins = staff?.filter((s) => s.role === "admin") ?? [];
+  const subAdmins = staff?.filter((s) => s.role === "sub_admin") ?? [];
 
   const handleInvite = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -512,42 +637,83 @@ function TeamPanel({ currentStaffId }: { currentStaffId: string }) {
             ))}
           </ul>
         ) : (
-          <motion.ul
-            initial="hidden"
-            animate="show"
-            variants={staggerParent}
-            className="mt-3 flex flex-col gap-2"
-          >
-            {staff.map((member) => (
-              <motion.li
-                key={member.id}
-                variants={fadeUp}
-                className="flex items-center justify-between rounded-2xl bg-card px-4 py-3 shadow-soft"
+          <div className="mt-3 flex flex-col gap-5">
+            <div>
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                Admins ({admins.length})
+              </p>
+              <motion.ul
+                initial="hidden"
+                animate="show"
+                variants={staggerParent}
+                className="flex flex-col gap-2"
               >
-                <div>
-                  <p className="text-sm font-semibold">
-                    {member.name} {member.id === currentStaffId && "(you)"}
-                  </p>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {member.role === "admin" ? "Admin" : "Sub-admin"}
-                  </p>
-                </div>
-                {member.role === "sub_admin" && (
-                  <button
-                    type="button"
-                    disabled={busyId === member.id}
-                    onClick={() => handleRemove(member)}
-                    aria-label={`Remove ${member.name}`}
-                    className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-transform duration-150 hover:scale-110 hover:text-destructive active:scale-95 disabled:opacity-50"
+                {admins.map((member) => (
+                  <motion.li
+                    key={member.id}
+                    variants={fadeUp}
+                    className="flex items-center justify-between rounded-2xl bg-primary/10 px-4 py-3"
                   >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                )}
-              </motion.li>
-            ))}
-          </motion.ul>
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {member.name} {member.id === currentStaffId && "(you)"}
+                      </p>
+                      <p className="text-xs uppercase tracking-wide text-primary">Admin</p>
+                    </div>
+                  </motion.li>
+                ))}
+              </motion.ul>
+            </div>
+
+            <div>
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                Sub-admins ({subAdmins.length})
+              </p>
+              {subAdmins.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No sub-admins yet.</p>
+              ) : (
+                <motion.ul
+                  initial="hidden"
+                  animate="show"
+                  variants={staggerParent}
+                  className="flex flex-col gap-2"
+                >
+                  {subAdmins.map((member) => (
+                    <motion.li
+                      key={member.id}
+                      variants={fadeUp}
+                      className="flex items-center justify-between rounded-2xl bg-card px-4 py-3 shadow-soft"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold">{member.name}</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Sub-admin
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setRemovingMember(member)}
+                        aria-label={`Remove ${member.name}`}
+                        className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-transform duration-150 hover:scale-110 hover:text-destructive active:scale-95"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </motion.li>
+                  ))}
+                </motion.ul>
+              )}
+            </div>
+          </div>
         )}
       </div>
+
+      {removingMember && (
+        <RemoveStaffDialog
+          member={removingMember}
+          onClose={() => setRemovingMember(null)}
+          onRemoved={load}
+        />
+      )}
     </div>
   );
 }
