@@ -4,14 +4,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Check,
   CheckCircle2,
+  ChevronDown,
+  Image as ImageIcon,
   Loader2,
   MapPin,
+  Megaphone,
   PackageCheck,
+  Pencil,
+  Plus,
   RefreshCcw,
   Send,
   Trash2,
   UserPlus,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   listOrders,
   confirmPaymentManually,
@@ -19,10 +25,37 @@ import {
   assignRider,
   type OrderRow,
 } from "@/lib/orders";
+import { listOrderUpdates, sendOrderUpdate, type OrderUpdate } from "@/lib/orderUpdates";
 import { listStaff, createSubAdmin } from "@/lib/staffAuth";
 import { listRiders, addRider, removeRider, type Rider } from "@/lib/riders";
 import { isGpsAddress, gpsMapsUrl, extractLatLng, osmPreviewUrl } from "@/lib/address";
 import { buildWhatsAppLink, riderDeliveryMessage } from "@/lib/whatsapp";
+import {
+  fetchAllProductsForStaff,
+  createProduct,
+  updateProduct,
+  setProductActive,
+  deleteProduct,
+  slugifyProductId,
+  type ProductRow,
+  type ProductInput,
+} from "@/lib/productsApi";
+import {
+  lineLabels,
+  flavourLabels,
+  type Line,
+  type Format,
+  type Flavour,
+  type Badge,
+} from "@/lib/products";
+import {
+  listAnnouncementsForStaff,
+  createAnnouncement,
+  setAnnouncementActive,
+  deleteAnnouncement,
+  type Announcement,
+  type AnnouncementType,
+} from "@/lib/announcements";
 import { StaffGate } from "@/components/StaffGate";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/lib/supabase";
@@ -88,16 +121,22 @@ export const Route = createFileRoute("/staff")({
 });
 
 function StaffDashboard({ staff }: { staff: StaffProfile }) {
-  const [tab, setTab] = useState<"orders" | "riders" | "team">("orders");
+  const [tab, setTab] = useState<"orders" | "riders" | "menu" | "announcements" | "team">("orders");
 
   return (
     <div className="mx-auto max-w-3xl pt-2">
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         <TabButton active={tab === "orders"} onClick={() => setTab("orders")}>
           Orders
         </TabButton>
         <TabButton active={tab === "riders"} onClick={() => setTab("riders")}>
           Riders
+        </TabButton>
+        <TabButton active={tab === "menu"} onClick={() => setTab("menu")}>
+          Menu
+        </TabButton>
+        <TabButton active={tab === "announcements"} onClick={() => setTab("announcements")}>
+          Announcements
         </TabButton>
         {staff.role === "admin" && (
           <TabButton active={tab === "team"} onClick={() => setTab("team")}>
@@ -108,6 +147,8 @@ function StaffDashboard({ staff }: { staff: StaffProfile }) {
 
       {tab === "orders" && <OrdersPanel staff={staff} />}
       {tab === "riders" && <RidersPanel />}
+      {tab === "menu" && <MenuPanel />}
+      {tab === "announcements" && <AnnouncementsPanel staff={staff} />}
       {tab === "team" && <TeamPanel currentStaffId={staff.id} />}
     </div>
   );
@@ -158,6 +199,12 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [justDeliveredId, setJustDeliveredId] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
+
+  const [expandedUpdatesId, setExpandedUpdatesId] = useState<string | null>(null);
+  const [updatesByOrder, setUpdatesByOrder] = useState<Map<string, OrderUpdate[]>>(new Map());
+  const [loadingUpdatesId, setLoadingUpdatesId] = useState<string | null>(null);
+  const [updateDraft, setUpdateDraft] = useState("");
+  const [sendingUpdate, setSendingUpdate] = useState(false);
 
   const now = new Date();
   const [showHistory, setShowHistory] = useState(false);
@@ -281,6 +328,43 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
     } finally {
       setBusyId(null);
       setAssigningId(null);
+    }
+  };
+
+  // Lazy-loaded per order — most orders are never expanded, so this avoids
+  // an N+1 fetch of updates for every order on every page load/refresh.
+  const handleToggleUpdates = async (orderId: string) => {
+    if (expandedUpdatesId === orderId) {
+      setExpandedUpdatesId(null);
+      return;
+    }
+    setExpandedUpdatesId(orderId);
+    if (updatesByOrder.has(orderId)) return;
+    setLoadingUpdatesId(orderId);
+    try {
+      const updates = await listOrderUpdates(orderId);
+      setUpdatesByOrder((prev) => new Map(prev).set(orderId, updates));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not load updates.");
+    } finally {
+      setLoadingUpdatesId(null);
+    }
+  };
+
+  const handleSendUpdate = async (orderId: string) => {
+    const message = updateDraft.trim();
+    if (!message) return;
+    setSendingUpdate(true);
+    try {
+      await sendOrderUpdate(orderId, message, staff.id);
+      const updates = await listOrderUpdates(orderId);
+      setUpdatesByOrder((prev) => new Map(prev).set(orderId, updates));
+      setUpdateDraft("");
+      toast.success("Update sent — the customer will see it via order lookup.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not send update.");
+    } finally {
+      setSendingUpdate(false);
     }
   };
 
@@ -551,6 +635,71 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                     >
                       Assign a rider
                     </button>
+                  )}
+                </div>
+
+                {/* Per-order updates — sent to the customer, surfaced via
+                    phone lookup on the public /orders page. */}
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleUpdates(order.id)}
+                    className="flex items-center gap-1 text-xs font-semibold text-muted-foreground"
+                  >
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform duration-150 ${
+                        expandedUpdatesId === order.id ? "rotate-180" : ""
+                      }`}
+                      aria-hidden="true"
+                    />
+                    Updates
+                    {(updatesByOrder.get(order.id)?.length ?? 0) > 0 &&
+                      ` (${updatesByOrder.get(order.id)!.length})`}
+                  </button>
+
+                  {expandedUpdatesId === order.id && (
+                    <div className="mt-2 flex flex-col gap-2 rounded-2xl bg-secondary/30 p-3">
+                      {loadingUpdatesId === order.id ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        (updatesByOrder.get(order.id) ?? []).map((u) => (
+                          <div key={u.id} className="text-xs">
+                            <p className="text-foreground">{u.message}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {new Date(u.created_at).toLocaleString("en-GH", {
+                                day: "numeric",
+                                month: "short",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                      <div className="flex gap-2">
+                        <input
+                          value={updateDraft}
+                          onChange={(e) => setUpdateDraft(e.target.value)}
+                          placeholder="e.g. Running 20 mins late"
+                          className="w-full rounded-xl bg-card px-3 py-2 text-xs outline-none ring-primary/40 focus:ring-2"
+                        />
+                        <button
+                          type="button"
+                          disabled={sendingUpdate || !updateDraft.trim()}
+                          onClick={() => handleSendUpdate(order.id)}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+                        >
+                          {sendingUpdate ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5" aria-hidden="true" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -971,6 +1120,663 @@ function RidersPanel() {
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
+              </motion.li>
+            ))}
+          </motion.ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const LINES: Line[] = ["drinking", "probiotic", "greek", "cups"];
+const FORMATS: Format[] = ["pouch", "tub", "cup"];
+const FLAVOURS: Flavour[] = [
+  "plain",
+  "vanilla",
+  "strawberry",
+  "banana",
+  "pineapple",
+  "lime",
+  "coconut",
+];
+const BADGES: Badge[] = [
+  "NEW",
+  "High Protein",
+  "Low Fat",
+  "Low Sugar",
+  "No Preservatives",
+  "Contains Iron",
+  "Probiotic",
+];
+
+const emptyProductForm: ProductInput = {
+  name: "",
+  line: "drinking",
+  format: "pouch",
+  flavour: "plain",
+  size: "",
+  price: 0,
+  tagline: "",
+  description: "",
+  badges: [],
+  active: true,
+};
+
+function ProductForm({
+  value,
+  onChange,
+}: {
+  value: ProductInput;
+  onChange: (next: ProductInput) => void;
+}) {
+  const toggleBadge = (badge: Badge) => {
+    const has = value.badges.includes(badge);
+    onChange({
+      ...value,
+      badges: has ? value.badges.filter((b) => b !== badge) : [...value.badges, badge],
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <input
+        required
+        placeholder="Name"
+        value={value.name}
+        onChange={(e) => onChange({ ...value, name: e.target.value })}
+        className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          value={value.line}
+          onChange={(e) => onChange({ ...value, line: e.target.value as Line })}
+          className="rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+        >
+          {LINES.map((l) => (
+            <option key={l} value={l}>
+              {lineLabels[l]}
+            </option>
+          ))}
+        </select>
+        <select
+          value={value.format}
+          onChange={(e) => onChange({ ...value, format: e.target.value as Format })}
+          className="rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+        >
+          {FORMATS.map((f) => (
+            <option key={f} value={f}>
+              {f}
+            </option>
+          ))}
+        </select>
+        <select
+          value={value.flavour}
+          onChange={(e) => onChange({ ...value, flavour: e.target.value as Flavour })}
+          className="rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+        >
+          {FLAVOURS.map((f) => (
+            <option key={f} value={f}>
+              {flavourLabels[f]}
+            </option>
+          ))}
+        </select>
+        <input
+          required
+          placeholder="Size (e.g. 250ml pouch)"
+          value={value.size}
+          onChange={(e) => onChange({ ...value, size: e.target.value })}
+          className="rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+        />
+      </div>
+      <input
+        required
+        type="number"
+        min={0}
+        step="0.01"
+        placeholder="Price (GH₵)"
+        value={value.price || ""}
+        onChange={(e) => onChange({ ...value, price: Number(e.target.value) })}
+        className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+      />
+      <input
+        placeholder="Tagline (optional)"
+        value={value.tagline}
+        onChange={(e) => onChange({ ...value, tagline: e.target.value })}
+        className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+      />
+      <textarea
+        placeholder="Description (optional)"
+        value={value.description}
+        onChange={(e) => onChange({ ...value, description: e.target.value })}
+        rows={2}
+        className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+      />
+      <div className="flex flex-wrap gap-1.5">
+        {BADGES.map((b) => {
+          const active = value.badges.includes(b);
+          return (
+            <button
+              key={b}
+              type="button"
+              onClick={() => toggleBadge(b)}
+              className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors duration-150 ${
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary/60 text-muted-foreground"
+              }`}
+            >
+              {b}
+            </button>
+          );
+        })}
+      </div>
+      <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={value.active}
+          onChange={(e) => onChange({ ...value, active: e.target.checked })}
+          className="h-4 w-4 rounded"
+        />
+        Show on the public Menu
+      </label>
+    </div>
+  );
+}
+
+function MenuPanel() {
+  const [products, setProducts] = useState<ProductRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [adding, setAdding] = useState(false);
+  const [addForm, setAddForm] = useState<ProductInput>(emptyProductForm);
+  const [savingNew, setSavingNew] = useState(false);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<ProductInput>(emptyProductForm);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoadError(null);
+    try {
+      setProducts(await fetchAllProductsForStaff());
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not load products.");
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const grouped = useMemo(() => {
+    const map = new Map<Line, ProductRow[]>();
+    for (const p of products ?? []) {
+      const list = map.get(p.line) ?? [];
+      list.push(p);
+      map.set(p.line, list);
+    }
+    return map;
+  }, [products]);
+
+  const handleCreate = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSavingNew(true);
+    try {
+      const id = slugifyProductId(addForm.name);
+      if (!id) throw new Error("Enter a product name first.");
+      await createProduct(id, addForm);
+      toast.success(`${addForm.name} added to the menu.`);
+      setAddForm(emptyProductForm);
+      setAdding(false);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not add product.");
+    } finally {
+      setSavingNew(false);
+    }
+  };
+
+  const startEdit = (product: ProductRow) => {
+    setEditingId(product.id);
+    setEditForm({
+      name: product.name,
+      line: product.line,
+      format: product.format,
+      flavour: product.flavour,
+      size: product.size,
+      price: Number(product.price),
+      tagline: product.tagline ?? "",
+      description: product.description ?? "",
+      badges: product.badges,
+      active: product.active,
+    });
+  };
+
+  const handleSaveEdit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingId) return;
+    setSavingEdit(true);
+    try {
+      await updateProduct(editingId, editForm);
+      toast.success("Product updated.");
+      setEditingId(null);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save changes.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleToggleActive = async (product: ProductRow) => {
+    setBusyId(product.id);
+    try {
+      await setProductActive(product.id, !product.active);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update availability.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDelete = async (product: ProductRow) => {
+    if (!window.confirm(`Permanently delete "${product.name}"? This can't be undone.`)) return;
+    setBusyId(product.id);
+    try {
+      await deleteProduct(product.id);
+      toast.success(`${product.name} deleted.`);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete product.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="rounded-3xl bg-card p-5 shadow-soft">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold">Add a product</h2>
+          <button
+            type="button"
+            onClick={() => setAdding((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            {adding ? "Cancel" : "New"}
+          </button>
+        </div>
+
+        {adding && (
+          <form onSubmit={handleCreate} className="mt-4 flex flex-col gap-3">
+            <ProductForm value={addForm} onChange={setAddForm} />
+            <p className="text-[11px] text-muted-foreground">
+              New products use a placeholder image until a real image asset is added to the codebase
+              for this item — editing an existing product's other fields isn't affected.
+            </p>
+            <button
+              type="submit"
+              disabled={savingNew}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-70"
+            >
+              {savingNew ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              )}
+              {savingNew ? "Adding…" : "Add product"}
+            </button>
+          </form>
+        )}
+      </div>
+
+      <div>
+        <h2 className="font-display text-lg font-bold">Menu</h2>
+
+        {loadError && (
+          <p className="mt-3 rounded-2xl bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive">
+            {loadError}
+          </p>
+        )}
+
+        {products === null ? (
+          <ul className="mt-3 flex flex-col gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <ListRowSkeleton key={i} />
+            ))}
+          </ul>
+        ) : (
+          <div className="mt-3 flex flex-col gap-5">
+            {LINES.filter((l) => (grouped.get(l) ?? []).length > 0).map((line) => (
+              <div key={line}>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  {lineLabels[line]}
+                </p>
+                <motion.ul
+                  initial="hidden"
+                  animate="show"
+                  variants={staggerParent}
+                  className="flex flex-col gap-2"
+                >
+                  {(grouped.get(line) ?? []).map((product) => (
+                    <motion.li
+                      key={product.id}
+                      variants={fadeUp}
+                      className="rounded-2xl bg-card p-4 shadow-soft"
+                    >
+                      {editingId === product.id ? (
+                        <form onSubmit={handleSaveEdit} className="flex flex-col gap-3">
+                          <ProductForm value={editForm} onChange={setEditForm} />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditingId(null)}
+                              className="flex-1 rounded-full bg-secondary py-2.5 text-sm font-semibold text-secondary-foreground"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={savingEdit}
+                              className="flex-1 rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-70"
+                            >
+                              {savingEdit ? "Saving…" : "Save"}
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold">
+                              {product.name}{" "}
+                              {!product.active && (
+                                <span className="ml-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                                  Hidden
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {product.size} · GH₵ {product.price}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => startEdit(product)}
+                              aria-label={`Edit ${product.name}`}
+                              className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-transform duration-150 hover:scale-110 hover:text-foreground"
+                            >
+                              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyId === product.id}
+                              onClick={() => handleToggleActive(product)}
+                              className="rounded-full bg-secondary/60 px-2.5 py-1 text-[10px] font-bold text-muted-foreground disabled:opacity-50"
+                            >
+                              {product.active ? "Hide" : "Show"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyId === product.id}
+                              onClick={() => handleDelete(product)}
+                              aria-label={`Delete ${product.name}`}
+                              className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-transform duration-150 hover:scale-110 hover:text-destructive disabled:opacity-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </motion.li>
+                  ))}
+                </motion.ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const DURATION_OPTIONS: { label: string; days: number | null }[] = [
+  { label: "1 day", days: 1 },
+  { label: "3 days", days: 3 },
+  { label: "7 days", days: 7 },
+  { label: "30 days", days: 30 },
+  { label: "No expiry", days: null },
+];
+
+function AnnouncementsPanel({ staff }: { staff: StaffProfile }) {
+  const [announcements, setAnnouncements] = useState<Announcement[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const [type, setType] = useState<AnnouncementType>("notice");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [durationDays, setDurationDays] = useState<number | null>(7);
+  const [creating, setCreating] = useState(false);
+
+  const load = async () => {
+    setLoadError(null);
+    try {
+      setAnnouncements(await listAnnouncementsForStaff());
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not load announcements.");
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const handleCreate = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await createAnnouncement({ type, title, body, imageFile, durationDays }, staff.id);
+      toast.success(
+        type === "advert" ? "Advert live — it'll pop up on the next site visit." : "Notice posted.",
+      );
+      setTitle("");
+      setBody("");
+      setImageFile(null);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create announcement.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleToggleActive = async (a: Announcement) => {
+    setBusyId(a.id);
+    try {
+      await setAnnouncementActive(a.id, !a.active);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update announcement.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDelete = async (a: Announcement) => {
+    if (!window.confirm(`Delete "${a.title}"? This can't be undone.`)) return;
+    setBusyId(a.id);
+    try {
+      await deleteAnnouncement(a.id);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete announcement.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="rounded-3xl bg-card p-5 shadow-soft">
+        <h2 className="font-display text-lg font-bold">New announcement</h2>
+        <form onSubmit={handleCreate} className="mt-4 flex flex-col gap-3">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setType("notice")}
+              className={`flex-1 rounded-full py-2 text-xs font-bold ${
+                type === "notice"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary/60 text-muted-foreground"
+              }`}
+            >
+              Notice
+            </button>
+            <button
+              type="button"
+              onClick={() => setType("advert")}
+              className={`flex-1 rounded-full py-2 text-xs font-bold ${
+                type === "advert"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary/60 text-muted-foreground"
+              }`}
+            >
+              Advert
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {type === "advert"
+              ? "Pops up with a golden-rays animation, then disappears — not kept in the bell list."
+              : "Pops up once, and stays listed in the notification bell until it expires."}
+          </p>
+
+          <input
+            required
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+          />
+          <textarea
+            required
+            placeholder="Message"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={3}
+            className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+          />
+
+          <label className="flex items-center gap-2 rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm text-muted-foreground">
+            <ImageIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">{imageFile ? imageFile.name : "Image (optional)"}</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+              className="ml-auto text-xs"
+            />
+          </label>
+
+          <select
+            value={durationDays ?? "none"}
+            onChange={(e) =>
+              setDurationDays(e.target.value === "none" ? null : Number(e.target.value))
+            }
+            className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+          >
+            {DURATION_OPTIONS.map((opt) => (
+              <option key={opt.label} value={opt.days ?? "none"}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="submit"
+            disabled={creating}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-70"
+          >
+            {creating ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Megaphone className="h-4 w-4" aria-hidden="true" />
+            )}
+            {creating ? "Posting…" : "Post announcement"}
+          </button>
+        </form>
+      </div>
+
+      <div>
+        <h2 className="font-display text-lg font-bold">All announcements</h2>
+
+        {loadError && (
+          <p className="mt-3 rounded-2xl bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive">
+            {loadError}
+          </p>
+        )}
+
+        {announcements === null ? (
+          <ul className="mt-3 flex flex-col gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <ListRowSkeleton key={i} />
+            ))}
+          </ul>
+        ) : announcements.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">No announcements yet.</p>
+        ) : (
+          <motion.ul
+            initial="hidden"
+            animate="show"
+            variants={staggerParent}
+            className="mt-3 flex flex-col gap-2"
+          >
+            {announcements.map((a) => (
+              <motion.li
+                key={a.id}
+                variants={fadeUp}
+                className="flex items-center justify-between gap-2 rounded-2xl bg-card px-4 py-3 shadow-soft"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {a.title}{" "}
+                    <span className="ml-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                      {a.type}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {a.active ? "Active" : "Inactive"}
+                    {a.expires_at &&
+                      ` · expires ${new Date(a.expires_at).toLocaleDateString("en-GH", {
+                        day: "numeric",
+                        month: "short",
+                      })}`}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={busyId === a.id}
+                    onClick={() => handleToggleActive(a)}
+                    className="rounded-full bg-secondary/60 px-2.5 py-1 text-[10px] font-bold text-muted-foreground disabled:opacity-50"
+                  >
+                    {a.active ? "Deactivate" : "Activate"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === a.id}
+                    onClick={() => handleDelete(a)}
+                    aria-label={`Delete ${a.title}`}
+                    className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-transform duration-150 hover:scale-110 hover:text-destructive disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </div>
               </motion.li>
             ))}
           </motion.ul>

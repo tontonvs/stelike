@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
 import { Loader2, MessageCircle, PackageSearch } from "lucide-react";
 import { lookupOrdersByPhone, type OrderRow } from "@/lib/orders";
+import { lookupOrderUpdatesByPhone, type OrderUpdate } from "@/lib/orderUpdates";
 import { isGpsAddress, gpsMapsUrl } from "@/lib/address";
 import { EASE_OUT } from "@/lib/motion";
 
@@ -20,6 +21,7 @@ function OrdersPage() {
   const reduce = useReducedMotion();
   const [phone, setPhone] = useState("");
   const [orders, setOrders] = useState<OrderRow[] | null>(null);
+  const [updatesByOrder, setUpdatesByOrder] = useState<Map<string, OrderUpdate[]>>(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
@@ -29,9 +31,27 @@ function OrdersPage() {
     setError(null);
     setLoading(true);
     try {
-      const results = await lookupOrdersByPhone(phone.trim());
+      const trimmedPhone = phone.trim();
+      const results = await lookupOrdersByPhone(trimmedPhone);
       setOrders(results);
       setSearched(true);
+
+      // Best-effort — staff updates are a nice-to-have on this page, not
+      // the reason the customer is here, so a failure here shouldn't block
+      // showing the order results that already succeeded.
+      try {
+        const updates = await lookupOrderUpdatesByPhone(trimmedPhone);
+        const grouped = new Map<string, OrderUpdate[]>();
+        for (const u of updates) {
+          const list = grouped.get(u.order_id) ?? [];
+          list.push(u);
+          grouped.set(u.order_id, list);
+        }
+        setUpdatesByOrder(grouped);
+      } catch (updateErr) {
+        console.warn("Could not load order updates:", updateErr);
+        setUpdatesByOrder(new Map());
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not look up orders.");
     } finally {
@@ -129,6 +149,27 @@ function OrdersPage() {
                     </li>
                   ))}
                 </ul>
+
+                {(updatesByOrder.get(order.id)?.length ?? 0) > 0 && (
+                  <div className="mt-3 flex flex-col gap-1.5 rounded-2xl bg-secondary/30 p-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                      Updates from Yoglait
+                    </p>
+                    {updatesByOrder.get(order.id)!.map((u) => (
+                      <div key={u.id} className="text-xs">
+                        <p className="text-foreground">{u.message}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {new Date(u.created_at).toLocaleString("en-GH", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="mt-3 flex items-center justify-between">
                   <p className="font-display text-base font-bold">GH₵ {order.total}</p>
