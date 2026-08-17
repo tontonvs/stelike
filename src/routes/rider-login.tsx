@@ -25,7 +25,7 @@ function RiderLoginPage() {
     try {
       const result = await loginRider(identifier.trim(), password);
       if (!result) {
-        setError("Name/number or password is incorrect.");
+        setError("Name, number, or email — or password — doesn't match.");
         return;
       }
       window.localStorage.setItem("yoglait_rider_session", JSON.stringify(result));
@@ -64,7 +64,7 @@ function RiderLoginPage() {
 
         <label className="mt-6 block">
           <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-            Name or phone number
+            Name, phone number, or email
           </span>
           <input
             required

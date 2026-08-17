@@ -62,7 +62,9 @@ export async function terminateRider(id: string): Promise<void> {
 /** Public: verifies a rider's login (name or phone number, plus password)
  * via the rider_login() SECURITY DEFINER function. Riders don't have a
  * Supabase Auth account — this checks a hashed password stored directly on
- * the `riders` row instead, matched by name or phone. Returns null on any
+ * the `riders` row instead, matched by name, phone, or email (phone is
+ * normalized — spacing, dashes, and a "+233" prefix are all treated as
+ * equivalent). Returns null on any
  * mismatch, deliberately without saying which part was wrong. */
 export async function loginRider(
   identifier: string,
