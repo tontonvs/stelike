@@ -86,7 +86,11 @@ export function StaffGate({ children }: { children: (staff: StaffProfile) => Rea
       animate="show"
       className="min-h-screen bg-hero-gradient"
     >
-      <header className="flex items-center justify-between px-6 py-5">
+      {/* pt-28/sm:pt-32 clears the fixed Navbar (see Navbar.tsx, z-50) — every
+          other route does this (e.g. orders.tsx uses pt-32); this header was
+          the one place missing it, which meant the Navbar's fixed container
+          sat visually on top of and swallowed clicks on the Sign out button. */}
+      <header className="flex items-center justify-between px-6 pb-5 pt-28 sm:pt-32">
         <div>
           <p className="font-display text-lg font-bold">Yoglait Staff</p>
           <p className="text-xs text-muted-foreground">
