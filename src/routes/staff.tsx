@@ -125,7 +125,7 @@ function StaffDashboard({ staff }: { staff: StaffProfile }) {
 
   return (
     <div className="mx-auto max-w-3xl pt-2">
-      <div className="mb-6 flex flex-wrap gap-2">
+      <div className="mb-6 flex flex-wrap items-center gap-2">
         <TabButton active={tab === "orders"} onClick={() => setTab("orders")}>
           Orders
         </TabButton>
@@ -139,9 +139,12 @@ function StaffDashboard({ staff }: { staff: StaffProfile }) {
           Announcements
         </TabButton>
         {staff.role === "admin" && (
-          <TabButton active={tab === "team"} onClick={() => setTab("team")}>
-            Team
-          </TabButton>
+          <>
+            <div className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden="true" />
+            <TabButton active={tab === "team"} onClick={() => setTab("team")}>
+              Team
+            </TabButton>
+          </>
         )}
       </div>
 
