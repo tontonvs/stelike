@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { Loader2, ShieldAlert, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { removeStaff, type StaffProfile } from "@/lib/staffAuth";
+import { terminateStaff, type StaffProfile } from "@/lib/staffAuth";
 import { EASE_OUT } from "@/lib/motion";
 
 type Props = {
@@ -14,7 +14,11 @@ type Props = {
 
 /** Real re-authentication, not just a typed string — this calls
  * signInWithPassword against the CURRENT admin's own email to verify the
- * password is actually correct before allowing a staff removal. */
+ * password is actually correct before allowing a termination.
+ *
+ * Named RemoveStaffDialog for historical reasons — the action itself is now
+ * a soft termination (terminateStaff), not a hard delete, so the sub-admin's
+ * history stays visible in the employee log. */
 export function RemoveStaffDialog({ member, onClose, onRemoved }: Props) {
   const reduce = useReducedMotion();
   const [typedName, setTypedName] = useState("");
@@ -51,12 +55,12 @@ export function RemoveStaffDialog({ member, onClose, onRemoved }: Props) {
       // Deliberate 3s pause — gives real visual weight to a destructive,
       // access-revoking action rather than it vanishing instantly.
       await new Promise((resolve) => setTimeout(resolve, 3000));
-      await removeStaff(member.id);
-      toast.success(`${member.name} removed from staff.`);
+      await terminateStaff(member.id);
+      toast.success(`${member.name} terminated.`);
       onRemoved();
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not remove staff.");
+      toast.error(err instanceof Error ? err.message : "Could not terminate staff.");
       setStage("confirm");
     }
   };
@@ -85,7 +89,7 @@ export function RemoveStaffDialog({ member, onClose, onRemoved }: Props) {
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-destructive/10 text-destructive">
                     <ShieldAlert className="h-4 w-4" aria-hidden="true" />
                   </span>
-                  <p className="font-display text-base font-bold">Remove {member.name}?</p>
+                  <p className="font-display text-base font-bold">Terminate {member.name}?</p>
                 </div>
                 <button
                   type="button"
@@ -97,7 +101,8 @@ export function RemoveStaffDialog({ member, onClose, onRemoved }: Props) {
                 </button>
               </div>
               <p className="text-xs text-muted-foreground">
-                They'll lose dashboard access immediately. This can't be undone from here.
+                They&apos;ll lose dashboard access immediately, but stay visible in the employee log
+                with their order history. This can&apos;t be undone from here.
               </p>
 
               <label className="block">
@@ -144,7 +149,7 @@ export function RemoveStaffDialog({ member, onClose, onRemoved }: Props) {
                   disabled={!nameMatches || !password}
                   className="flex-1 rounded-full bg-destructive py-2.5 text-sm font-bold text-destructive-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95 disabled:opacity-50"
                 >
-                  Remove
+                  Terminate
                 </button>
               </div>
             </motion.form>
@@ -157,7 +162,7 @@ export function RemoveStaffDialog({ member, onClose, onRemoved }: Props) {
               className="flex flex-col items-center gap-3 py-6 text-center"
             >
               <Loader2 className="h-6 w-6 animate-spin text-destructive" aria-hidden="true" />
-              <p className="text-sm font-semibold text-foreground">Removing {member.name}…</p>
+              <p className="text-sm font-semibold text-foreground">Terminating {member.name}…</p>
             </motion.div>
           )}
         </AnimatePresence>

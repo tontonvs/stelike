@@ -6,6 +6,8 @@ export type Rider = {
   phone: string | null;
   email: string | null;
   active: boolean;
+  created_at: string;
+  terminated_at: string | null;
 };
 
 export type RiderSession = {
@@ -18,7 +20,7 @@ export type RiderSession = {
 export async function listRiders(): Promise<Rider[]> {
   const { data, error } = await supabase
     .from("riders")
-    .select("id, name, phone, email, active")
+    .select("id, name, phone, email, active, created_at, terminated_at")
     .order("name", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as Rider[];
@@ -44,8 +46,16 @@ export async function addRider(name: string, contact: string, password: string):
   if (error) throw new Error(error.message);
 }
 
-export async function removeRider(id: string): Promise<void> {
-  const { error } = await supabase.from("riders").delete().eq("id", id);
+/** Staff: terminates a rider — kept in the log, no longer able to log in
+ * (rider_login() only matches riders where `active`), and no longer
+ * assignable to new orders (the assignment dropdown filters to active
+ * riders only). Replaces the old hard-delete removeRider(); a rider's
+ * history would be lost if the row were actually deleted. */
+export async function terminateRider(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("riders")
+    .update({ active: false, terminated_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) throw new Error(error.message);
 }
 

@@ -19,6 +19,7 @@ export type OrderRow = {
   delivery_status: "processing" | "out_for_delivery" | "delivered";
   rider_name: string | null;
   rider_phone: string | null;
+  rider_id: string | null;
   confirmed_by: string | null;
   delivered_by: string | null;
   created_at: string;
@@ -111,16 +112,51 @@ export async function markDelivered(orderId: string, staffId: string): Promise<v
 }
 
 /** Assigns (or reassigns) a rider to an order. Snapshots name/phone directly on
- * the order rather than a foreign key, so past deliveries keep the exact number
- * that was actually used even if the rider is later edited or removed. */
+ * the order (so past deliveries keep the exact number that was actually used
+ * even if the rider is later edited or terminated) *and* stores rider_id, a
+ * real link used to reliably find "this rider's" order history even across a
+ * rename. Orders assigned before rider_id existed only have the text
+ * snapshot — see listOrdersForRider()'s fallback. */
 export async function assignRider(
   orderId: string,
+  riderId: string,
   riderName: string,
   riderPhone: string | null,
 ): Promise<void> {
   const { error } = await supabase
     .from("orders")
-    .update({ rider_name: riderName, rider_phone: riderPhone })
+    .update({ rider_id: riderId, rider_name: riderName, rider_phone: riderPhone })
     .eq("id", orderId);
   if (error) throw new Error(error.message);
+}
+
+/** Staff: every order a given staff member confirmed payment on or marked
+ * delivered — used by the employee log's "History" button. A single order
+ * can appear once even if the same person did both; check confirmed_by/
+ * delivered_by on the returned row to see which. */
+export async function listOrdersForStaff(staffId: string): Promise<OrderRow[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .or(`confirmed_by.eq.${staffId},delivered_by.eq.${staffId}`)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OrderRow[];
+}
+
+/** Staff: every order a given rider completed delivery on — used by the
+ * employee log's "History" button. Matches on rider_id when present, and
+ * falls back to the rider_name text snapshot for orders assigned before
+ * rider_id existed (see assignRider() above) — a fallback that could, in
+ * theory, also match a *different* rider who happens to share the same
+ * name on one of those older, unlinked orders. */
+export async function listOrdersForRider(riderId: string, riderName: string): Promise<OrderRow[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("delivery_status", "delivered")
+    .or(`rider_id.eq.${riderId},rider_name.eq.${riderName}`)
+    .order("delivered_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OrderRow[];
 }

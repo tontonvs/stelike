@@ -5,6 +5,7 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  History,
   Image as ImageIcon,
   Loader2,
   MapPin,
@@ -16,6 +17,7 @@ import {
   Send,
   Trash2,
   UserPlus,
+  UserX,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -23,11 +25,13 @@ import {
   confirmPaymentManually,
   markDelivered,
   assignRider,
+  listOrdersForStaff,
+  listOrdersForRider,
   type OrderRow,
 } from "@/lib/orders";
 import { listOrderUpdates, sendOrderUpdate, type OrderUpdate } from "@/lib/orderUpdates";
-import { listStaff, createSubAdmin } from "@/lib/staffAuth";
-import { listRiders, addRider, removeRider, type Rider } from "@/lib/riders";
+import { listStaff, listStaffForLog, createSubAdmin } from "@/lib/staffAuth";
+import { listRiders, addRider, terminateRider, type Rider } from "@/lib/riders";
 import { isGpsAddress, gpsMapsUrl, extractLatLng, osmPreviewUrl } from "@/lib/address";
 import { buildWhatsAppLink, riderDeliveryMessage } from "@/lib/whatsapp";
 import {
@@ -121,7 +125,9 @@ export const Route = createFileRoute("/staff")({
 });
 
 function StaffDashboard({ staff }: { staff: StaffProfile }) {
-  const [tab, setTab] = useState<"orders" | "riders" | "menu" | "announcements" | "team">("orders");
+  const [tab, setTab] = useState<"orders" | "riders" | "menu" | "announcements" | "team" | "log">(
+    "orders",
+  );
 
   return (
     <div className="mx-auto max-w-3xl pt-2">
@@ -146,6 +152,9 @@ function StaffDashboard({ staff }: { staff: StaffProfile }) {
             <TabButton active={tab === "team"} onClick={() => setTab("team")}>
               Team
             </TabButton>
+            <TabButton active={tab === "log"} onClick={() => setTab("log")}>
+              Log
+            </TabButton>
           </>
         )}
       </div>
@@ -155,6 +164,7 @@ function StaffDashboard({ staff }: { staff: StaffProfile }) {
       {tab === "menu" && <MenuPanel />}
       {tab === "announcements" && <AnnouncementsPanel staff={staff} />}
       {tab === "team" && <TeamPanel currentStaffId={staff.id} />}
+      {tab === "log" && <EmployeeLogPanel />}
     </div>
   );
 }
@@ -326,7 +336,7 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
     if (!rider) return;
     setBusyId(order.id);
     try {
-      await assignRider(order.id, rider.name, rider.phone);
+      await assignRider(order.id, rider.id, rider.name, rider.phone);
       await load();
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Could not assign rider.");
@@ -614,8 +624,8 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                         </button>
                       </div>
                     </div>
-                  ) : assigningId === order.id || riders.length === 0 ? (
-                    riders.length === 0 ? (
+                  ) : assigningId === order.id || riders.filter((r) => r.active).length === 0 ? (
+                    riders.filter((r) => r.active).length === 0 ? (
                       <p className="text-[11px] text-muted-foreground">
                         No riders yet — add one in the Riders tab.
                       </p>
@@ -630,11 +640,13 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                         <option value="" disabled>
                           Choose a rider…
                         </option>
-                        {riders.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name} · {r.phone ?? "no phone"}
-                          </option>
-                        ))}
+                        {riders
+                          .filter((r) => r.active)
+                          .map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.name} · {r.phone ?? "no phone"}
+                            </option>
+                          ))}
                       </select>
                     )
                   ) : (
@@ -974,10 +986,10 @@ function TeamPanel({ currentStaffId }: { currentStaffId: string }) {
                       <button
                         type="button"
                         onClick={() => setRemovingMember(member)}
-                        aria-label={`Remove ${member.name}`}
+                        aria-label={`Terminate ${member.name}`}
                         className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-transform duration-150 hover:scale-110 hover:text-destructive active:scale-95"
                       >
-                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        <UserX className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </motion.li>
                   ))}
@@ -1036,14 +1048,19 @@ function RidersPanel() {
     }
   };
 
-  const handleRemove = async (rider: Rider) => {
-    if (!window.confirm(`Remove ${rider.name} from the rider list?`)) return;
+  const handleTerminate = async (rider: Rider) => {
+    if (
+      !window.confirm(
+        `Terminate ${rider.name}? They'll lose rider-login access and won't be assignable to new orders, but stay visible in the employee log with their delivery history.`,
+      )
+    )
+      return;
     setBusyId(rider.id);
     try {
-      await removeRider(rider.id);
+      await terminateRider(rider.id);
       await load();
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Could not remove rider.");
+      setLoadError(err instanceof Error ? err.message : "Could not terminate rider.");
     } finally {
       setBusyId(null);
     }
@@ -1114,6 +1131,9 @@ function RidersPanel() {
 
       <div>
         <h2 className="font-display text-lg font-bold">Riders</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Terminated riders move to the Log tab, along with sub-admins.
+        </p>
 
         {loadError && (
           <p className="mt-3 rounded-2xl bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive">
@@ -1127,7 +1147,7 @@ function RidersPanel() {
               <ListRowSkeleton key={i} />
             ))}
           </ul>
-        ) : riders.length === 0 ? (
+        ) : riders.filter((r) => r.active).length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">No riders added yet.</p>
         ) : (
           <motion.ul
@@ -1136,29 +1156,31 @@ function RidersPanel() {
             variants={staggerParent}
             className="mt-3 flex flex-col gap-2"
           >
-            {riders.map((rider) => (
-              <motion.li
-                key={rider.id}
-                variants={fadeUp}
-                className="flex items-center justify-between rounded-2xl bg-card px-4 py-3 shadow-soft"
-              >
-                <div>
-                  <p className="text-sm font-semibold">{rider.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {rider.phone ?? rider.email ?? "No contact on file"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={busyId === rider.id}
-                  onClick={() => handleRemove(rider)}
-                  aria-label={`Remove ${rider.name}`}
-                  className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-transform duration-150 hover:scale-110 hover:text-destructive active:scale-95 disabled:opacity-50"
+            {riders
+              .filter((r) => r.active)
+              .map((rider) => (
+                <motion.li
+                  key={rider.id}
+                  variants={fadeUp}
+                  className="flex items-center justify-between rounded-2xl bg-card px-4 py-3 shadow-soft"
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </motion.li>
-            ))}
+                  <div>
+                    <p className="text-sm font-semibold">{rider.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {rider.phone ?? rider.email ?? "No contact on file"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busyId === rider.id}
+                    onClick={() => handleTerminate(rider)}
+                    aria-label={`Terminate ${rider.name}`}
+                    className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-transform duration-150 hover:scale-110 hover:text-destructive active:scale-95 disabled:opacity-50"
+                  >
+                    <UserX className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </motion.li>
+              ))}
           </motion.ul>
         )}
       </div>
@@ -1848,6 +1870,270 @@ function AnnouncementsPanel({ staff }: { staff: StaffProfile }) {
           </motion.ul>
         )}
       </div>
+    </div>
+  );
+}
+
+type EmployeeLogEntry = {
+  id: string;
+  name: string;
+  type: "Sub-admin" | "Rider";
+  createdAt: string;
+  terminatedAt: string | null;
+  contact: string | null;
+};
+
+type LogSortMode = "name" | "date";
+type LogStatusFilter = "all" | "active" | "terminated";
+
+function formatLogDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatHistoryDate(iso: string) {
+  return new Date(iso).toLocaleString("en-GH", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Admin-only. A read-oriented log of every sub-admin and rider ever added —
+ * unlike the Team/Riders tabs (which only show who's currently active),
+ * this includes terminated people too, since the whole point is keeping
+ * their history around after they're gone. */
+function EmployeeLogPanel() {
+  const [entries, setEntries] = useState<EmployeeLogEntry[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useState<LogSortMode>("name");
+  const [statusFilter, setStatusFilter] = useState<LogStatusFilter>("all");
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [historyByEntry, setHistoryByEntry] = useState<Map<string, OrderRow[]>>(new Map());
+  const [loadingHistoryId, setLoadingHistoryId] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoadError(null);
+    try {
+      const [subAdmins, riders] = await Promise.all([listStaffForLog(), listRiders()]);
+      const combined: EmployeeLogEntry[] = [
+        ...subAdmins.map((s) => ({
+          id: s.id,
+          name: s.name,
+          type: "Sub-admin" as const,
+          createdAt: s.created_at,
+          terminatedAt: s.terminated_at,
+          contact: null,
+        })),
+        ...riders.map((r) => ({
+          id: r.id,
+          name: r.name,
+          type: "Rider" as const,
+          createdAt: r.created_at,
+          terminatedAt: r.terminated_at,
+          contact: r.phone ?? r.email,
+        })),
+      ];
+      setEntries(combined);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not load the employee log.");
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const filtered = useMemo(() => {
+    let list = entries ?? [];
+    if (statusFilter === "active") list = list.filter((e) => !e.terminatedAt);
+    if (statusFilter === "terminated") list = list.filter((e) => !!e.terminatedAt);
+
+    const sorted = [...list];
+    if (sortMode === "name") {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    return sorted;
+  }, [entries, statusFilter, sortMode]);
+
+  const handleToggleHistory = async (entry: EmployeeLogEntry) => {
+    if (expandedId === entry.id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(entry.id);
+    setHistoryError(null);
+    if (historyByEntry.has(entry.id)) return;
+    setLoadingHistoryId(entry.id);
+    try {
+      const orders =
+        entry.type === "Sub-admin"
+          ? await listOrdersForStaff(entry.id)
+          : await listOrdersForRider(entry.id, entry.name);
+      setHistoryByEntry((prev) => new Map(prev).set(entry.id, orders));
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : "Could not load history.");
+    } finally {
+      setLoadingHistoryId(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-bold">Employee log</h2>
+        <div className="flex gap-2">
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as LogSortMode)}
+            aria-label="Sort by"
+            className="rounded-full bg-secondary/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground outline-none"
+          >
+            <option value="name">Name A–Z</option>
+            <option value="date">Date added</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as LogStatusFilter)}
+            aria-label="Filter by status"
+            className="rounded-full bg-secondary/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground outline-none"
+          >
+            <option value="all">All</option>
+            <option value="active">Still around</option>
+            <option value="terminated">Terminated</option>
+          </select>
+        </div>
+      </div>
+
+      {loadError && (
+        <p className="rounded-2xl bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive">
+          {loadError}
+        </p>
+      )}
+
+      {entries === null ? (
+        <ul className="flex flex-col gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <ListRowSkeleton key={i} />
+          ))}
+        </ul>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No one matches this filter.</p>
+      ) : (
+        <motion.ul
+          initial="hidden"
+          animate="show"
+          variants={staggerParent}
+          className="flex flex-col gap-2"
+        >
+          {filtered.map((entry) => (
+            <motion.li
+              key={`${entry.type}-${entry.id}`}
+              variants={fadeUp}
+              className="rounded-2xl bg-card p-4 shadow-soft"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {entry.name}{" "}
+                    <span className="ml-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                      {entry.type}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Added {formatLogDate(entry.createdAt)}
+                    {entry.terminatedAt ? (
+                      <>
+                        {" "}
+                        · <span className="text-destructive">Terminated</span>{" "}
+                        {formatLogDate(entry.terminatedAt)}
+                      </>
+                    ) : (
+                      <>
+                        {" "}
+                        · <span className="text-primary">Still around</span>
+                      </>
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleHistory(entry)}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary/60 px-3 py-1.5 text-[11px] font-bold text-muted-foreground"
+                >
+                  <History className="h-3.5 w-3.5" aria-hidden="true" />
+                  History
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 transition-transform duration-150 ${
+                      expandedId === entry.id ? "rotate-180" : ""
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+
+              {expandedId === entry.id && (
+                <div className="mt-3 flex flex-col gap-2 rounded-2xl bg-secondary/30 p-3">
+                  {loadingHistoryId === entry.id ? (
+                    <Loader2
+                      className="h-4 w-4 animate-spin text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  ) : historyError ? (
+                    <p className="text-xs font-medium text-destructive">{historyError}</p>
+                  ) : (historyByEntry.get(entry.id) ?? []).length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      {entry.type === "Sub-admin"
+                        ? "No confirmed or delivered orders yet."
+                        : "No completed deliveries yet."}
+                    </p>
+                  ) : (
+                    (historyByEntry.get(entry.id) ?? []).map((order) => {
+                      const didConfirm = order.confirmed_by === entry.id;
+                      const didDeliver = order.delivered_by === entry.id;
+                      return (
+                        <div key={order.id} className="text-xs">
+                          <p className="font-semibold text-foreground">{order.reference}</p>
+                          {entry.type === "Sub-admin" ? (
+                            <>
+                              {didConfirm && (
+                                <p className="text-muted-foreground">
+                                  Confirmed payment
+                                  {order.paid_at && ` · ${formatHistoryDate(order.paid_at)}`}
+                                </p>
+                              )}
+                              {didDeliver && (
+                                <p className="text-muted-foreground">
+                                  Marked delivered
+                                  {order.delivered_at &&
+                                    ` · ${formatHistoryDate(order.delivered_at)}`}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-muted-foreground">
+                              Delivered
+                              {order.delivered_at && ` · ${formatHistoryDate(order.delivered_at)}`}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </motion.li>
+          ))}
+        </motion.ul>
+      )}
     </div>
   );
 }
