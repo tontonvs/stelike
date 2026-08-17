@@ -116,7 +116,7 @@ export async function markDelivered(orderId: string, staffId: string): Promise<v
 export async function assignRider(
   orderId: string,
   riderName: string,
-  riderPhone: string,
+  riderPhone: string | null,
 ): Promise<void> {
   const { error } = await supabase
     .from("orders")

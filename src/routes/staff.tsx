@@ -140,7 +140,9 @@ function StaffDashboard({ staff }: { staff: StaffProfile }) {
         </TabButton>
         {staff.role === "admin" && (
           <>
-            <div className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden="true" />
+            <span aria-hidden="true" className="mx-1 text-sm font-bold text-muted-foreground">
+              |
+            </span>
             <TabButton active={tab === "team"} onClick={() => setTab("team")}>
               Team
             </TabButton>
@@ -584,20 +586,25 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <p className="text-xs font-semibold text-foreground">{order.rider_name}</p>
-                        <p className="text-[11px] text-muted-foreground">{order.rider_phone}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {order.rider_phone ?? "No phone on file"}
+                        </p>
                       </div>
                       <div className="flex gap-2">
-                        <a
-                          href={buildWhatsAppLink(
-                            order.rider_phone ?? "",
-                            riderDeliveryMessage(order),
-                          )}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground"
-                        >
-                          <Send className="h-3 w-3" aria-hidden="true" /> Send details
-                        </a>
+                        {order.rider_phone ? (
+                          <a
+                            href={buildWhatsAppLink(order.rider_phone, riderDeliveryMessage(order))}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground"
+                          >
+                            <Send className="h-3 w-3" aria-hidden="true" /> Send details
+                          </a>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">
+                            Share details manually
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => setAssigningId(order.id)}
@@ -625,7 +632,7 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                         </option>
                         {riders.map((r) => (
                           <option key={r.id} value={r.id}>
-                            {r.name} · {r.phone}
+                            {r.name} · {r.phone ?? "no phone"}
                           </option>
                         ))}
                       </select>
@@ -997,7 +1004,7 @@ function RidersPanel() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const [form, setForm] = useState({ name: "", phone: "" });
+  const [form, setForm] = useState({ name: "", contact: "", password: "" });
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -1019,8 +1026,8 @@ function RidersPanel() {
     setAddError(null);
     setAdding(true);
     try {
-      await addRider(form.name, form.phone);
-      setForm({ name: "", phone: "" });
+      await addRider(form.name, form.contact, form.password);
+      setForm({ name: "", contact: "", password: "" });
       await load();
     } catch (err) {
       setAddError(err instanceof Error ? err.message : "Could not add rider.");
@@ -1047,22 +1054,47 @@ function RidersPanel() {
       <div className="rounded-3xl bg-card p-5 shadow-soft">
         <h2 className="font-display text-lg font-bold">Add a rider</h2>
         <form onSubmit={handleAdd} className="mt-4 flex flex-col gap-3">
-          <input
-            required
-            placeholder="Name"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
-          />
-          <input
-            required
-            type="tel"
-            inputMode="tel"
-            placeholder="Phone (e.g. 020 000 0000)"
-            value={form.phone}
-            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
-          />
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Name</span>
+            <input
+              required
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+              Email or phone number
+            </span>
+            <input
+              required
+              placeholder="e.g. 020 000 0000 or rider@email.com"
+              value={form.contact}
+              onChange={(e) => setForm((f) => ({ ...f, contact: e.target.value }))}
+              className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+              Password
+            </span>
+            <input
+              required
+              type="password"
+              minLength={6}
+              placeholder="Rider will use this to sign in"
+              value={form.password}
+              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              className="w-full rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+            />
+          </label>
+
+          <p className="text-[11px] text-muted-foreground">
+            Riders registered with a phone number get delivery details sent via WhatsApp; riders
+            registered with email only don&apos;t (no phone to message), and staff will need to
+            share details another way.
+          </p>
 
           {addError && (
             <p className="rounded-2xl bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive">
@@ -1112,7 +1144,9 @@ function RidersPanel() {
               >
                 <div>
                   <p className="text-sm font-semibold">{rider.name}</p>
-                  <p className="text-xs text-muted-foreground">{rider.phone}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {rider.phone ?? rider.email ?? "No contact on file"}
+                  </p>
                 </div>
                 <button
                   type="button"
