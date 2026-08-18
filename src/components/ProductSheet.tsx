@@ -17,6 +17,7 @@ export function ProductSheet({ product, allProducts, onClose, onSelect }: Props)
   const { addItem } = useCart();
   const reduce = useReducedMotion();
   const [slide, setSlide] = useState(0);
+  const outOfStock = product?.inStock === false;
 
   useEffect(() => setSlide(0), [product?.id]);
 
@@ -71,6 +72,11 @@ export function ProductSheet({ product, allProducts, onClose, onSelect }: Props)
                   {lineLabels[product.line]} · {product.size}
                 </p>
                 <h2 className="font-display truncate text-2xl font-bold">{product.name}</h2>
+                {outOfStock && (
+                  <span className="mt-1 inline-block rounded-full bg-secondary px-2.5 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                    Out of stock
+                  </span>
+                )}
               </div>
               <button
                 type="button"
@@ -203,7 +209,13 @@ export function ProductSheet({ product, allProducts, onClose, onSelect }: Props)
 
             <div className="sticky bottom-0 mt-6 flex items-center justify-between gap-4 rounded-full bg-card/90 py-3 backdrop-blur">
               <span className="font-display text-2xl font-bold">GH₵ {product.price}</span>
-              <QuantityStepper size="md" onAdd={(qty) => addItem(product.id, qty)} />
+              {outOfStock ? (
+                <span className="rounded-full bg-secondary px-6 py-2.5 text-sm font-semibold text-muted-foreground">
+                  Currently unavailable
+                </span>
+              ) : (
+                <QuantityStepper size="md" onAdd={(qty) => addItem(product.id, qty)} />
+              )}
             </div>
           </motion.div>
         </motion.div>

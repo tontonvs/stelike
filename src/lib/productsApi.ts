@@ -22,6 +22,7 @@ export type ProductRow = {
   description: string | null;
   badges: Product["badges"];
   active: boolean;
+  in_stock: boolean;
 };
 
 export type ProductInput = {
@@ -35,6 +36,7 @@ export type ProductInput = {
   description: string;
   badges: Product["badges"];
   active: boolean;
+  in_stock: boolean;
 };
 
 /** Turns a product name into a stable, URL-safe id ("Banana Cup" ->
@@ -80,6 +82,7 @@ export async function fetchProducts(): Promise<Product[]> {
       description: row.description ?? "",
       image: media?.image ?? placeholderImage,
       images: media?.images ?? [placeholderImage],
+      inStock: row.in_stock,
     };
   });
 }
@@ -115,6 +118,7 @@ export async function createProduct(id: string, input: ProductInput): Promise<vo
     description: input.description || null,
     badges: input.badges,
     active: input.active,
+    in_stock: input.in_stock,
   });
   if (error) throw new Error(error.message);
 }
@@ -130,6 +134,17 @@ export async function updateProduct(id: string, input: Partial<ProductInput>): P
  * without editing anything else about it. */
 export async function setProductActive(id: string, active: boolean): Promise<void> {
   const { error } = await supabase.from("products").update({ active }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/** Staff: quick on/off for whether a product is currently orderable. Unlike
+ * setProductActive(), the product stays visible on the public Menu when
+ * this is false — just greyed out with an "Out of stock" label and no
+ * add-to-cart control. For something still being made but temporarily
+ * unavailable; use setProductActive() instead for a genuinely discontinued
+ * or hidden item. */
+export async function setProductInStock(id: string, inStock: boolean): Promise<void> {
+  const { error } = await supabase.from("products").update({ in_stock: inStock }).eq("id", id);
   if (error) throw new Error(error.message);
 }
 

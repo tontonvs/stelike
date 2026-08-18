@@ -6,19 +6,28 @@ import { fadeUp, EASE_OUT } from "@/lib/motion";
 
 export function ProductCard({ product, onOpen }: { product: Product; onOpen: () => void }) {
   const { addItem } = useCart();
+  const outOfStock = product.inStock === false;
 
   return (
     <motion.li
       layout={false}
       variants={fadeUp}
-      whileHover={{ y: -4, scale: 1.01 }}
+      whileHover={outOfStock ? {} : { y: -4, scale: 1.01 }}
       transition={{ duration: 0.18, ease: EASE_OUT }}
-      className="relative flex flex-col rounded-2xl bg-card p-3 shadow-sm sm:p-4"
+      className={`relative flex flex-col rounded-2xl bg-card p-3 shadow-sm sm:p-4 ${
+        outOfStock ? "opacity-60" : ""
+      }`}
     >
-      {product.badges.includes("NEW") && (
-        <span className="absolute right-2 top-2 z-10 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase text-accent-foreground">
-          New
+      {outOfStock ? (
+        <span className="absolute right-2 top-2 z-10 rounded-full bg-secondary px-2 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
+          Out of stock
         </span>
+      ) : (
+        product.badges.includes("NEW") && (
+          <span className="absolute right-2 top-2 z-10 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase text-accent-foreground">
+            New
+          </span>
+        )
       )}
 
       <button
@@ -68,7 +77,13 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
 
       <div className="mt-3 flex items-center justify-between gap-2">
         <span className="font-display text-sm font-bold sm:text-base">GH₵ {product.price}</span>
-        <QuantityStepper onAdd={(qty) => addItem(product.id, qty)} size="md" />
+        {outOfStock ? (
+          <span className="rounded-full bg-secondary/60 px-3.5 py-1.5 text-[11px] font-semibold text-muted-foreground sm:px-5 sm:py-2 sm:text-xs">
+            Unavailable
+          </span>
+        ) : (
+          <QuantityStepper onAdd={(qty) => addItem(product.id, qty)} size="md" />
+        )}
       </div>
     </motion.li>
   );

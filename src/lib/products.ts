@@ -74,6 +74,11 @@ export type Product = {
   badges: Badge[];
   tagline: string;
   description: string;
+  /** Optional because the bundled fallback catalog below (used only when
+   * Supabase is unreachable) has no real stock data — undefined is treated
+   * the same as `true` (in stock) everywhere this is read. Live products
+   * from fetchProducts() always have this set explicitly from the DB. */
+  inStock?: boolean;
 };
 
 export const products: Product[] = [

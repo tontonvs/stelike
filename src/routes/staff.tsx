@@ -39,6 +39,7 @@ import {
   createProduct,
   updateProduct,
   setProductActive,
+  setProductInStock,
   deleteProduct,
   slugifyProductId,
   type ProductRow,
@@ -1220,6 +1221,7 @@ const emptyProductForm: ProductInput = {
   description: "",
   badges: [],
   active: true,
+  in_stock: true,
 };
 
 function ProductForm({
@@ -1368,6 +1370,21 @@ function ProductForm({
         />
         Show on the public Menu
       </label>
+      <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={value.in_stock}
+          onChange={(e) => onChange({ ...value, in_stock: e.target.checked })}
+          className="h-4 w-4 rounded"
+        />
+        Currently in stock
+      </label>
+      {value.active && !value.in_stock && (
+        <p className="text-[11px] text-muted-foreground">
+          Still shown on the Menu, greyed out with an "Out of stock" label — customers can't add it
+          to cart. Use "Show on the public Menu" instead if it should disappear entirely.
+        </p>
+      )}
     </div>
   );
 }
@@ -1439,6 +1456,7 @@ function MenuPanel() {
       description: product.description ?? "",
       badges: product.badges,
       active: product.active,
+      in_stock: product.in_stock,
     });
   };
 
@@ -1465,6 +1483,18 @@ function MenuPanel() {
       await load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not update availability.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleToggleInStock = async (product: ProductRow) => {
+    setBusyId(product.id);
+    try {
+      await setProductInStock(product.id, !product.in_stock);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update stock status.");
     } finally {
       setBusyId(null);
     }
@@ -1586,6 +1616,11 @@ function MenuPanel() {
                                   Hidden
                                 </span>
                               )}
+                              {product.active && !product.in_stock && (
+                                <span className="ml-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                                  Out of stock
+                                </span>
+                              )}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {product.size} · GH₵ {product.price}
@@ -1599,6 +1634,14 @@ function MenuPanel() {
                               className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-transform duration-150 hover:scale-110 hover:text-foreground"
                             >
                               <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyId === product.id}
+                              onClick={() => handleToggleInStock(product)}
+                              className="rounded-full bg-secondary/60 px-2.5 py-1 text-[10px] font-bold text-muted-foreground disabled:opacity-50"
+                            >
+                              {product.in_stock ? "Mark out of stock" : "Mark in stock"}
                             </button>
                             <button
                               type="button"
