@@ -7,6 +7,7 @@ import {
   ChevronDown,
   History,
   Image as ImageIcon,
+  Info,
   Loader2,
   MapPin,
   Megaphone,
@@ -1617,7 +1618,8 @@ function MenuPanel() {
                                 </span>
                               )}
                               {product.active && !product.in_stock && (
-                                <span className="ml-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-bold uppercase text-destructive">
+                                  <Info className="h-3 w-3" aria-hidden="true" />
                                   Out of stock
                                 </span>
                               )}
@@ -1639,8 +1641,13 @@ function MenuPanel() {
                               type="button"
                               disabled={busyId === product.id}
                               onClick={() => handleToggleInStock(product)}
-                              className="rounded-full bg-secondary/60 px-2.5 py-1 text-[10px] font-bold text-muted-foreground disabled:opacity-50"
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold disabled:opacity-50 ${
+                                product.in_stock
+                                  ? "bg-destructive/10 text-destructive"
+                                  : "bg-secondary/60 text-muted-foreground"
+                              }`}
                             >
+                              {product.in_stock && <Info className="h-3 w-3" aria-hidden="true" />}
                               {product.in_stock ? "Mark out of stock" : "Mark in stock"}
                             </button>
                             <button

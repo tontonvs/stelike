@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { flavourChip, flavourLabels, lineLabels, variantsOf, type Product } from "@/lib/products";
 import { useCart } from "./CartProvider";
 import { QuantityStepper } from "./QuantityStepper";
@@ -73,7 +73,8 @@ export function ProductSheet({ product, allProducts, onClose, onSelect }: Props)
                 </p>
                 <h2 className="font-display truncate text-2xl font-bold">{product.name}</h2>
                 {outOfStock && (
-                  <span className="mt-1 inline-block rounded-full bg-secondary px-2.5 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                  <span className="mt-1 flex items-center gap-1 text-xs font-bold text-destructive">
+                    <Info className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     Out of stock
                   </span>
                 )}
@@ -210,7 +211,7 @@ export function ProductSheet({ product, allProducts, onClose, onSelect }: Props)
             <div className="sticky bottom-0 mt-6 flex items-center justify-between gap-4 rounded-full bg-card/90 py-3 backdrop-blur">
               <span className="font-display text-2xl font-bold">GH₵ {product.price}</span>
               {outOfStock ? (
-                <span className="rounded-full bg-secondary px-6 py-2.5 text-sm font-semibold text-muted-foreground">
+                <span className="rounded-full bg-destructive/10 px-6 py-2.5 text-sm font-semibold text-destructive">
                   Currently unavailable
                 </span>
               ) : (

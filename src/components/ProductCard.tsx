@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Info } from "lucide-react";
 import { flavourChip, flavourLabels, type Product } from "@/lib/products";
 import { useCart } from "./CartProvider";
 import { QuantityStepper } from "./QuantityStepper";
@@ -15,19 +16,13 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
       whileHover={outOfStock ? {} : { y: -4, scale: 1.01 }}
       transition={{ duration: 0.18, ease: EASE_OUT }}
       className={`relative flex flex-col rounded-2xl bg-card p-3 shadow-sm sm:p-4 ${
-        outOfStock ? "opacity-60" : ""
+        outOfStock ? "opacity-85" : ""
       }`}
     >
-      {outOfStock ? (
-        <span className="absolute right-2 top-2 z-10 rounded-full bg-secondary px-2 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
-          Out of stock
+      {product.badges.includes("NEW") && (
+        <span className="absolute right-2 top-2 z-10 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase text-accent-foreground">
+          New
         </span>
-      ) : (
-        product.badges.includes("NEW") && (
-          <span className="absolute right-2 top-2 z-10 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase text-accent-foreground">
-            New
-          </span>
-        )
       )}
 
       <button
@@ -47,6 +42,12 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
             className="h-24 w-auto object-contain sm:h-32"
           />
         </span>
+        {outOfStock && (
+          <span className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-destructive">
+            <Info className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            Out of stock
+          </span>
+        )}
         <span className="mt-2 flex min-w-0 items-center gap-1.5">
           <span
             className={`h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-border ${flavourChip[product.flavour]}`}
@@ -78,7 +79,7 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
       <div className="mt-3 flex items-center justify-between gap-2">
         <span className="font-display text-sm font-bold sm:text-base">GH₵ {product.price}</span>
         {outOfStock ? (
-          <span className="rounded-full bg-secondary/60 px-3.5 py-1.5 text-[11px] font-semibold text-muted-foreground sm:px-5 sm:py-2 sm:text-xs">
+          <span className="rounded-full bg-destructive/10 px-3.5 py-1.5 text-[11px] font-semibold text-destructive sm:px-5 sm:py-2 sm:text-xs">
             Unavailable
           </span>
         ) : (
