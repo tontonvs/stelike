@@ -8,7 +8,8 @@ export type OrderRow = {
   customer_name: string;
   customer_phone: string;
   customer_email: string | null;
-  address: string;
+  address: string | null;
+  fulfillment_type: "delivery" | "pickup";
   note: string | null;
   items: OrderItemSnapshot[];
   subtotal: number;
@@ -32,7 +33,8 @@ export type NewOrderInput = {
   name: string;
   phone: string;
   email?: string;
-  address: string;
+  address?: string;
+  fulfillmentType: "delivery" | "pickup";
   note?: string;
   items: OrderItemSnapshot[];
   subtotal: number;
@@ -53,7 +55,8 @@ export async function createOrder(input: NewOrderInput): Promise<void> {
     customer_name: input.name,
     customer_phone: input.phone,
     customer_email: input.email || null,
-    address: input.address,
+    address: input.address?.trim() ? input.address : null,
+    fulfillment_type: input.fulfillmentType,
     note: input.note || null,
     items: input.items,
     subtotal: input.subtotal,

@@ -16,6 +16,7 @@ import {
   Plus,
   RefreshCcw,
   Send,
+  Store,
   Trash2,
   UserPlus,
   UserX,
@@ -505,7 +506,10 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
           className="mt-6 flex flex-col gap-3"
         >
           {filteredOrders.map((order) => {
-            const coords = isGpsAddress(order.address) ? extractLatLng(order.address) : null;
+            const coords =
+              order.fulfillment_type === "delivery" && order.address && isGpsAddress(order.address)
+                ? extractLatLng(order.address)
+                : null;
 
             return (
               <motion.li
@@ -524,7 +528,17 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                     <p className="text-xs text-muted-foreground">
                       {order.customer_name} · {order.customer_phone}
                     </p>
-                    {!coords && <p className="text-xs text-muted-foreground">{order.address}</p>}
+                    {order.fulfillment_type === "pickup" ? (
+                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                        <Store className="h-3 w-3" aria-hidden="true" />
+                        Pickup
+                      </span>
+                    ) : (
+                      !coords &&
+                      order.address && (
+                        <p className="text-xs text-muted-foreground">{order.address}</p>
+                      )
+                    )}
                   </div>
                   <div className="flex gap-1.5">
                     <StatusBadge
@@ -574,7 +588,7 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                       className="h-32 w-full border-0"
                     />
                     <a
-                      href={gpsMapsUrl(order.address)}
+                      href={gpsMapsUrl(order.address ?? "")}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center gap-1.5 bg-secondary/40 px-3 py-1.5 text-[11px] font-semibold text-primary"
@@ -592,75 +606,91 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                   ))}
                 </ul>
 
-                {/* Delivery assignment */}
-                <div className="mt-3 rounded-2xl bg-secondary/30 p-3">
-                  {order.rider_name ? (
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-semibold text-foreground">{order.rider_name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {order.rider_phone ?? "No phone on file"}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        {order.rider_phone ? (
-                          <a
-                            href={buildWhatsAppLink(order.rider_phone, riderDeliveryMessage(order))}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground"
+                {/* Delivery assignment — pickup orders don't need a rider */}
+                {order.fulfillment_type === "pickup" ? (
+                  <div className="mt-3 rounded-2xl bg-secondary/30 p-3">
+                    <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                      <Store className="h-3.5 w-3.5" aria-hidden="true" />
+                      Customer pickup — no rider needed
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-2xl bg-secondary/30 p-3">
+                    {order.rider_name ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-semibold text-foreground">
+                            {order.rider_name}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {order.rider_phone ?? "No phone on file"}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {order.rider_phone ? (
+                            <a
+                              href={buildWhatsAppLink(
+                                order.rider_phone,
+                                riderDeliveryMessage(order),
+                              )}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground"
+                            >
+                              <Send className="h-3 w-3" aria-hidden="true" /> Send details
+                            </a>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">
+                              Share details manually
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setAssigningId(order.id)}
+                            className="text-[11px] font-semibold text-muted-foreground underline"
                           >
-                            <Send className="h-3 w-3" aria-hidden="true" /> Send details
-                          </a>
-                        ) : (
-                          <span className="text-[11px] text-muted-foreground">
-                            Share details manually
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setAssigningId(order.id)}
-                          className="text-[11px] font-semibold text-muted-foreground underline"
-                        >
-                          Change
-                        </button>
+                            Change
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ) : assigningId === order.id || riders.filter((r) => r.active).length === 0 ? (
-                    riders.filter((r) => r.active).length === 0 ? (
-                      <p className="text-[11px] text-muted-foreground">
-                        No riders yet — add one in the Riders tab.
-                      </p>
+                    ) : assigningId === order.id || riders.filter((r) => r.active).length === 0 ? (
+                      riders.filter((r) => r.active).length === 0 ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          No riders yet — add one in the Riders tab.
+                        </p>
+                      ) : (
+                        <select
+                          autoFocus
+                          defaultValue=""
+                          disabled={busyId === order.id}
+                          onChange={(e) =>
+                            e.target.value && handleAssignRider(order, e.target.value)
+                          }
+                          className="w-full rounded-xl bg-card px-3 py-2 text-xs outline-none ring-primary/40 focus:ring-2"
+                        >
+                          <option value="" disabled>
+                            Choose a rider…
+                          </option>
+                          {riders
+                            .filter((r) => r.active)
+                            .map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.name} · {r.phone ?? "no phone"}
+                              </option>
+                            ))}
+                        </select>
+                      )
                     ) : (
-                      <select
-                        autoFocus
-                        defaultValue=""
-                        disabled={busyId === order.id}
-                        onChange={(e) => e.target.value && handleAssignRider(order, e.target.value)}
-                        className="w-full rounded-xl bg-card px-3 py-2 text-xs outline-none ring-primary/40 focus:ring-2"
+                      <button
+                        type="button"
+                        onClick={() => setAssigningId(order.id)}
+                        className="text-xs font-semibold text-primary"
                       >
-                        <option value="" disabled>
-                          Choose a rider…
-                        </option>
-                        {riders
-                          .filter((r) => r.active)
-                          .map((r) => (
-                            <option key={r.id} value={r.id}>
-                              {r.name} · {r.phone ?? "no phone"}
-                            </option>
-                          ))}
-                      </select>
-                    )
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setAssigningId(order.id)}
-                      className="text-xs font-semibold text-primary"
-                    >
-                      Assign a rider
-                    </button>
-                  )}
-                </div>
+                        Assign a rider
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Per-order updates — sent to the customer, surfaced via
                     phone lookup on the public /orders page. */}
@@ -764,7 +794,7 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                               >
                                 <Check className="h-4 w-4" aria-hidden="true" />
                               </motion.span>
-                              Delivered!
+                              {order.fulfillment_type === "pickup" ? "Picked up!" : "Delivered!"}
                             </motion.span>
                           ) : (
                             <motion.span
@@ -776,7 +806,9 @@ function OrdersPanel({ staff }: { staff: StaffProfile }) {
                               className="inline-flex items-center gap-1.5"
                             >
                               <PackageCheck className="h-4 w-4" aria-hidden="true" />
-                              Mark delivered
+                              {order.fulfillment_type === "pickup"
+                                ? "Mark picked up"
+                                : "Mark delivered"}
                             </motion.span>
                           )}
                         </AnimatePresence>

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
-import { Loader2, MessageCircle, PackageSearch } from "lucide-react";
+import { Loader2, MessageCircle, PackageSearch, Store } from "lucide-react";
 import { lookupOrdersByPhone, type OrderRow } from "@/lib/orders";
 import { lookupOrderUpdatesByPhone, type OrderUpdate } from "@/lib/orderUpdates";
 import { isGpsAddress, gpsMapsUrl } from "@/lib/address";
@@ -189,7 +189,12 @@ function OrdersPage() {
                   )}
                 </div>
 
-                {isGpsAddress(order.address) ? (
+                {order.fulfillment_type === "pickup" ? (
+                  <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                    <Store className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    Pickup at Yoglait, Tema Community 1, Accra
+                  </p>
+                ) : order.address && isGpsAddress(order.address) ? (
                   <a
                     href={gpsMapsUrl(order.address)}
                     target="_blank"

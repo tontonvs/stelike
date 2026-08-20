@@ -16,9 +16,16 @@ export function buildWhatsAppLink(phone: string, message: string): string {
   return `https://wa.me/${toWhatsAppNumber(phone)}?text=${encodeURIComponent(message)}`;
 }
 
-/** The message a staff member sends a rider once assigned to a delivery. */
+/** The message a staff member sends a rider once assigned to a delivery.
+ * Only ever called for delivery orders (pickup orders never reach the rider
+ * assignment UI), but `address` is nullable on the type either way, so this
+ * still needs a fallback. */
 export function riderDeliveryMessage(order: OrderRow): string {
-  const location = isGpsAddress(order.address) ? gpsMapsUrl(order.address) : order.address;
+  const location = order.address
+    ? isGpsAddress(order.address)
+      ? gpsMapsUrl(order.address)
+      : order.address
+    : "No address on file";
 
   return [
     `Yoglait delivery — ${order.reference}`,

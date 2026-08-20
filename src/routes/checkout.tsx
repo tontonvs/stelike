@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check, ChevronLeft, Loader2, MapPin, ShoppingBag, Sparkles } from "lucide-react";
+import { Check, ChevronLeft, Loader2, MapPin, ShoppingBag, Sparkles, Store } from "lucide-react";
 import { useCart } from "@/components/CartProvider";
 import { resolveCartItems, cartSubtotal, DELIVERY_FEE } from "@/lib/cart";
 import { flavourChip, flavourLabels } from "@/lib/products";
@@ -31,6 +31,11 @@ const steps: { id: Step; label: string }[] = [
   { id: "payment", label: "Payment" },
 ];
 
+type FulfillmentType = "delivery" | "pickup";
+// Matches the address used elsewhere in the project's docs — update here if
+// the shop ever moves or gains a more specific pickup address.
+const PICKUP_LOCATION = "Yoglait, Tema Community 1, Accra";
+
 type FormState = { name: string; phone: string; email: string; address: string; note: string };
 const emptyForm: FormState = { name: "", phone: "", email: "", address: "", note: "" };
 
@@ -43,6 +48,7 @@ function CheckoutPage() {
   const reduce = useReducedMotion();
   const { data: products } = useProducts();
   const [step, setStep] = useState<Step>("details");
+  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>("delivery");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
@@ -63,7 +69,8 @@ function CheckoutPage() {
 
   const items = useMemo(() => resolveCartItems(lines, products ?? []), [lines, products]);
   const subtotal = useMemo(() => cartSubtotal(items), [items]);
-  const total = subtotal + (items.length > 0 ? DELIVERY_FEE : 0);
+  const deliveryFee = fulfillmentType === "delivery" ? DELIVERY_FEE : 0;
+  const total = subtotal + (items.length > 0 ? deliveryFee : 0);
 
   const stepIndex = steps.findIndex((s) => s.id === step);
 
@@ -83,14 +90,15 @@ function CheckoutPage() {
 
   const applyLookupMatch = () => {
     if (!lookupMatch) return;
+    setFulfillmentType(lookupMatch.fulfillment_type);
     setForm((f) => ({
       ...f,
       name: lookupMatch.customer_name,
       email: lookupMatch.customer_email ?? "",
-      address: lookupMatch.address,
+      address: lookupMatch.address ?? "",
     }));
-    setAddressMode(isGpsAddress(lookupMatch.address) ? "location" : "type");
-    setLocationCaptured(isGpsAddress(lookupMatch.address));
+    setAddressMode(lookupMatch.address && isGpsAddress(lookupMatch.address) ? "location" : "type");
+    setLocationCaptured(Boolean(lookupMatch.address && isGpsAddress(lookupMatch.address)));
     setLookupMatch(null);
   };
 
@@ -143,7 +151,7 @@ function CheckoutPage() {
   const goNext = async () => {
     if (step === "details") {
       if (!formRef.current?.reportValidity()) return;
-      if (!form.address.trim()) {
+      if (fulfillmentType === "delivery" && !form.address.trim()) {
         setAddressError("Please add a delivery address or share your location.");
         return;
       }
@@ -166,7 +174,8 @@ function CheckoutPage() {
           name: form.name,
           phone: form.phone,
           email: form.email,
-          address: form.address,
+          ...(fulfillmentType === "delivery" ? { address: form.address } : {}),
+          fulfillmentType,
           note: form.note,
           items: items.map(({ line, product }) => ({
             id: product.id,
@@ -175,7 +184,7 @@ function CheckoutPage() {
             price: product.price,
           })),
           subtotal,
-          deliveryFee: DELIVERY_FEE,
+          deliveryFee,
           total,
         });
         setStep("payment");
@@ -219,7 +228,11 @@ function CheckoutPage() {
             custom_fields: [
               { display_name: "Customer", variable_name: "customer_name", value: form.name },
               { display_name: "Phone", variable_name: "phone", value: form.phone },
-              { display_name: "Address", variable_name: "address", value: form.address },
+              {
+                display_name: fulfillmentType === "pickup" ? "Fulfillment" : "Address",
+                variable_name: fulfillmentType === "pickup" ? "fulfillment" : "address",
+                value: fulfillmentType === "pickup" ? "Pickup at shop" : form.address,
+              },
             ],
           },
         },
@@ -241,7 +254,9 @@ function CheckoutPage() {
   // Order confirmed — show this regardless of step.
   if (confirmedRef) {
     const waMessage = encodeURIComponent(
-      `Hi Yoglait! I just paid for order ${confirmedRef}. Please confirm delivery to: ${form.address}`,
+      fulfillmentType === "pickup"
+        ? `Hi Yoglait! I just paid for order ${confirmedRef}. I'll come pick it up — please let me know when it's ready.`
+        : `Hi Yoglait! I just paid for order ${confirmedRef}. Please confirm delivery to: ${form.address}`,
     );
     return (
       <section className="flex min-h-[80vh] items-center justify-center bg-hero-gradient px-5 pt-32 pb-24 sm:px-8">
@@ -260,7 +275,9 @@ function CheckoutPage() {
           </p>
           <p className="font-display mt-1 text-lg font-bold tracking-wide">{confirmedRef}</p>
           <p className="mt-4 text-sm text-muted-foreground">
-            We'll WhatsApp you shortly to confirm delivery timing.
+            {fulfillmentType === "pickup"
+              ? `We'll WhatsApp you when it's ready to collect at ${PICKUP_LOCATION}.`
+              : "We'll WhatsApp you shortly to confirm delivery timing."}
           </p>
           <a
             href={`https://wa.me/233205527771?text=${waMessage}`}
@@ -349,6 +366,38 @@ function CheckoutPage() {
                 noValidate={false}
                 className="flex flex-col gap-4"
               >
+                <div>
+                  <span className="mb-2 block text-xs font-semibold text-muted-foreground">
+                    How would you like your order?
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFulfillmentType("delivery")}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-bold transition-colors duration-150 ${
+                        fulfillmentType === "delivery"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary/60 text-muted-foreground"
+                      }`}
+                    >
+                      <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                      Delivery
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFulfillmentType("pickup")}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-bold transition-colors duration-150 ${
+                        fulfillmentType === "pickup"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary/60 text-muted-foreground"
+                      }`}
+                    >
+                      <Store className="h-3.5 w-3.5" aria-hidden="true" />
+                      Pickup
+                    </button>
+                  </div>
+                </div>
+
                 <Field label="Phone number">
                   <input
                     required
@@ -426,137 +475,159 @@ function CheckoutPage() {
                   </label>
                 </div>
 
-                <div className="border-t border-border pt-4">
-                  <span className="mb-2 block text-xs font-semibold text-muted-foreground">
-                    Delivery address
-                  </span>
+                {fulfillmentType === "delivery" ? (
+                  <div className="border-t border-border pt-4">
+                    <span className="mb-2 block text-xs font-semibold text-muted-foreground">
+                      Delivery address
+                    </span>
 
-                  {addressMode === "location" ? (
-                    <div className="flex flex-col gap-2">
-                      <div className="rounded-3xl bg-primary/10 p-4">
-                        <AnimatePresence mode="wait">
-                          {locating ? (
-                            <motion.div
-                              key="loading"
-                              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.18, ease: EASE_OUT }}
-                              className="flex items-center gap-3"
-                            >
-                              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                              </span>
-                              <span>
-                                <span className="block text-sm font-bold text-foreground">
-                                  Getting your location…
-                                </span>
-                                <span className="block text-[11px] text-muted-foreground">
-                                  Hang tight, this only takes a second
-                                </span>
-                              </span>
-                            </motion.div>
-                          ) : locationCaptured && isGpsAddress(form.address) ? (
-                            <motion.div
-                              key={`captured-${captureCount}`}
-                              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.25, ease: EASE_OUT }}
-                              className="flex items-start gap-2.5"
-                            >
-                              <motion.span
-                                initial={reduce ? false : { scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ duration: 0.3, ease: EASE_OUT, delay: 0.06 }}
-                                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"
+                    {addressMode === "location" ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="rounded-3xl bg-primary/10 p-4">
+                          <AnimatePresence mode="wait">
+                            {locating ? (
+                              <motion.div
+                                key="loading"
+                                initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.18, ease: EASE_OUT }}
+                                className="flex items-center gap-3"
                               >
-                                <Check className="h-4 w-4" aria-hidden="true" />
-                              </motion.span>
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold text-foreground">
-                                  {captureCount > 1 ? "Location re-added ✓" : "Location added ✓"}
-                                </p>
-                                <p className="mt-1 text-[11px] text-muted-foreground">
-                                  Please stay where you are until delivery arrives — moving around
-                                  after sharing your location can cause delivery to fail.
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={handleShareLocation}
-                                  className="mt-2 text-[11px] font-semibold text-primary underline"
+                                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                </span>
+                                <span>
+                                  <span className="block text-sm font-bold text-foreground">
+                                    Getting your location…
+                                  </span>
+                                  <span className="block text-[11px] text-muted-foreground">
+                                    Hang tight, this only takes a second
+                                  </span>
+                                </span>
+                              </motion.div>
+                            ) : locationCaptured && isGpsAddress(form.address) ? (
+                              <motion.div
+                                key={`captured-${captureCount}`}
+                                initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.25, ease: EASE_OUT }}
+                                className="flex items-start gap-2.5"
+                              >
+                                <motion.span
+                                  initial={reduce ? false : { scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ duration: 0.3, ease: EASE_OUT, delay: 0.06 }}
+                                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"
                                 >
-                                  Re-share location
-                                </button>
-                              </div>
-                            </motion.div>
-                          ) : (
-                            <motion.button
-                              key="idle"
-                              initial={reduce ? { opacity: 0 } : { opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.15, ease: EASE_OUT }}
-                              type="button"
-                              onClick={handleShareLocation}
-                              className="flex w-full items-center gap-3 text-left"
-                            >
-                              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
-                                <MapPin className="h-4 w-4" aria-hidden="true" />
-                              </span>
-                              <span>
-                                <span className="block text-sm font-bold text-foreground">
-                                  Share my location
+                                  <Check className="h-4 w-4" aria-hidden="true" />
+                                </motion.span>
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {captureCount > 1 ? "Location re-added ✓" : "Location added ✓"}
+                                  </p>
+                                  <p className="mt-1 text-[11px] text-muted-foreground">
+                                    Please stay where you are until delivery arrives — moving around
+                                    after sharing your location can cause delivery to fail.
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={handleShareLocation}
+                                    className="mt-2 text-[11px] font-semibold text-primary underline"
+                                  >
+                                    Re-share location
+                                  </button>
+                                </div>
+                              </motion.div>
+                            ) : (
+                              <motion.button
+                                key="idle"
+                                initial={reduce ? { opacity: 0 } : { opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.15, ease: EASE_OUT }}
+                                type="button"
+                                onClick={handleShareLocation}
+                                className="flex w-full items-center gap-3 text-left"
+                              >
+                                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
+                                  <MapPin className="h-4 w-4" aria-hidden="true" />
                                 </span>
-                                <span className="block text-[11px] text-muted-foreground">
-                                  Fastest & most accurate — no typing needed
+                                <span>
+                                  <span className="block text-sm font-bold text-foreground">
+                                    Share my location
+                                  </span>
+                                  <span className="block text-[11px] text-muted-foreground">
+                                    Fastest & most accurate — no typing needed
+                                  </span>
                                 </span>
-                              </span>
-                            </motion.button>
+                              </motion.button>
+                            )}
+                          </AnimatePresence>
+                          {locationError && (
+                            <p className="mt-2 text-[11px] font-medium text-destructive">
+                              {locationError}
+                            </p>
                           )}
-                        </AnimatePresence>
-                        {locationError && (
-                          <p className="mt-2 text-[11px] font-medium text-destructive">
-                            {locationError}
-                          </p>
-                        )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={switchToTypeMode}
+                          className="self-start text-[11px] font-semibold text-muted-foreground underline"
+                        >
+                          Or type your address manually
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={switchToTypeMode}
-                        className="self-start text-[11px] font-semibold text-muted-foreground underline"
-                      >
-                        Or type your address manually
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      <textarea
-                        autoFocus
-                        value={isGpsAddress(form.address) ? "" : form.address}
-                        onChange={(e) => {
-                          setForm((f) => ({ ...f, address: e.target.value }));
-                          setAddressError(null);
-                        }}
-                        rows={2}
-                        className="w-full resize-none rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
-                        placeholder="House number, street, area — Accra/Tema"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setAddressMode("location")}
-                        className="inline-flex items-center gap-1 self-start text-[11px] font-semibold text-primary"
-                      >
-                        <MapPin className="h-3 w-3" aria-hidden="true" /> Share my location instead
-                      </button>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <textarea
+                          autoFocus
+                          value={isGpsAddress(form.address) ? "" : form.address}
+                          onChange={(e) => {
+                            setForm((f) => ({ ...f, address: e.target.value }));
+                            setAddressError(null);
+                          }}
+                          rows={2}
+                          className="w-full resize-none rounded-2xl bg-secondary/40 px-4 py-2.5 text-sm outline-none ring-primary/40 focus:ring-2"
+                          placeholder="House number, street, area — Accra/Tema"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setAddressMode("location")}
+                          className="inline-flex items-center gap-1 self-start text-[11px] font-semibold text-primary"
+                        >
+                          <MapPin className="h-3 w-3" aria-hidden="true" /> Share my location
+                          instead
+                        </button>
+                      </div>
+                    )}
 
-                  {addressError && (
-                    <p className="mt-1.5 text-[11px] font-medium text-destructive">
-                      {addressError}
-                    </p>
-                  )}
-                </div>
+                    {addressError && (
+                      <p className="mt-1.5 text-[11px] font-medium text-destructive">
+                        {addressError}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="border-t border-border pt-4">
+                    <span className="mb-2 block text-xs font-semibold text-muted-foreground">
+                      Pickup location
+                    </span>
+                    <div className="flex items-start gap-3 rounded-3xl bg-primary/10 p-4">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
+                        <Store className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                      <span>
+                        <span className="block text-sm font-bold text-foreground">
+                          {PICKUP_LOCATION}
+                        </span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          No address needed — we'll WhatsApp you once it's ready to collect.
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <Field label="Note (optional)">
                   <input
@@ -626,8 +697,8 @@ function CheckoutPage() {
                     <span>GH₵ {subtotal}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Delivery</span>
-                    <span>GH₵ {DELIVERY_FEE}</span>
+                    <span>{fulfillmentType === "pickup" ? "Pickup" : "Delivery"}</span>
+                    <span>{fulfillmentType === "pickup" ? "Free" : `GH₵ ${deliveryFee}`}</span>
                   </div>
                   <div className="flex justify-between text-base font-bold text-foreground">
                     <span>Total</span>
@@ -675,7 +746,12 @@ function CheckoutPage() {
                 <div className="rounded-3xl bg-secondary/30 p-4 text-sm">
                   <p className="font-semibold">{form.name}</p>
                   <p className="text-muted-foreground">{form.phone}</p>
-                  {isGpsAddress(form.address) ? (
+                  {fulfillmentType === "pickup" ? (
+                    <p className="flex items-center gap-1 text-muted-foreground">
+                      <Store className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> Pickup at{" "}
+                      {PICKUP_LOCATION}
+                    </p>
+                  ) : isGpsAddress(form.address) ? (
                     <a
                       href={gpsMapsUrl(form.address)}
                       target="_blank"
