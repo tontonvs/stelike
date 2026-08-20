@@ -1,7 +1,17 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check, ChevronLeft, Loader2, MapPin, ShoppingBag, Sparkles, Store } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  Copy,
+  Loader2,
+  MapPin,
+  ShoppingBag,
+  Sparkles,
+  Store,
+} from "lucide-react";
+import { toast } from "sonner";
 import { useCart } from "@/components/CartProvider";
 import { resolveCartItems, cartSubtotal, DELIVERY_FEE } from "@/lib/cart";
 import { flavourChip, flavourLabels } from "@/lib/products";
@@ -35,6 +45,7 @@ type FulfillmentType = "delivery" | "pickup";
 // Matches the address used elsewhere in the project's docs — update here if
 // the shop ever moves or gains a more specific pickup address.
 const PICKUP_LOCATION = "Yoglait, Tema Community 1, Accra";
+const PICKUP_MAPS_URL = "https://www.google.com/maps?q=5.6450999,-0.0053953";
 
 type FormState = { name: string; phone: string; email: string; address: string; note: string };
 const emptyForm: FormState = { name: "", phone: "", email: "", address: "", note: "" };
@@ -85,6 +96,15 @@ function CheckoutPage() {
       if (matches[0]) setLookupMatch(matches[0]);
     } catch {
       // Silent — lookup is a nice-to-have, not a checkout blocker.
+    }
+  };
+
+  const copyPickupLink = async () => {
+    try {
+      await navigator.clipboard.writeText(PICKUP_MAPS_URL);
+      toast.success("Location link copied.");
+    } catch {
+      toast.error("Could not copy — long-press the link instead.");
     }
   };
 
@@ -279,6 +299,16 @@ function CheckoutPage() {
               ? `We'll WhatsApp you when it's ready to collect at ${PICKUP_LOCATION}.`
               : "We'll WhatsApp you shortly to confirm delivery timing."}
           </p>
+          {fulfillmentType === "pickup" && (
+            <a
+              href={PICKUP_MAPS_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-primary underline"
+            >
+              <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> Get directions
+            </a>
+          )}
           <a
             href={`https://wa.me/233205527771?text=${waMessage}`}
             target="_blank"
@@ -617,12 +647,29 @@ function CheckoutPage() {
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
                         <Store className="h-4 w-4" aria-hidden="true" />
                       </span>
-                      <span>
+                      <span className="min-w-0 flex-1">
                         <span className="block text-sm font-bold text-foreground">
                           {PICKUP_LOCATION}
                         </span>
                         <span className="block text-[11px] text-muted-foreground">
                           No address needed — we'll WhatsApp you once it's ready to collect.
+                        </span>
+                        <span className="mt-2 flex items-center gap-3">
+                          <a
+                            href={PICKUP_MAPS_URL}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-primary underline"
+                          >
+                            <MapPin className="h-3 w-3" aria-hidden="true" /> View on Google Maps
+                          </a>
+                          <button
+                            type="button"
+                            onClick={copyPickupLink}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground"
+                          >
+                            <Copy className="h-3 w-3" aria-hidden="true" /> Copy link
+                          </button>
                         </span>
                       </span>
                     </div>
@@ -747,9 +794,19 @@ function CheckoutPage() {
                   <p className="font-semibold">{form.name}</p>
                   <p className="text-muted-foreground">{form.phone}</p>
                   {fulfillmentType === "pickup" ? (
-                    <p className="flex items-center gap-1 text-muted-foreground">
-                      <Store className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> Pickup at{" "}
-                      {PICKUP_LOCATION}
+                    <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Store className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> Pickup at{" "}
+                        {PICKUP_LOCATION}
+                      </span>
+                      <a
+                        href={PICKUP_MAPS_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary underline"
+                      >
+                        View on map
+                      </a>
                     </p>
                   ) : isGpsAddress(form.address) ? (
                     <a

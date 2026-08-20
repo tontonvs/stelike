@@ -190,9 +190,19 @@ function OrdersPage() {
                 </div>
 
                 {order.fulfillment_type === "pickup" ? (
-                  <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                    <Store className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    Pickup at Yoglait, Tema Community 1, Accra
+                  <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Store className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      Pickup at Yoglait, Tema Community 1, Accra
+                    </span>
+                    <a
+                      href="https://www.google.com/maps?q=5.6450999,-0.0053953"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline"
+                    >
+                      View on map
+                    </a>
                   </p>
                 ) : order.address && isGpsAddress(order.address) ? (
                   <a
