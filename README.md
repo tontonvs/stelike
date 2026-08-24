@@ -1,6 +1,6 @@
 # Yoglait Fresh Site
 
-Build a marketing + light e-commerce website for "Yoglait" — a yoghurt company based in Tema Community 1, Accra, Ghana. Their products are drinking yoghurt pouches, probiotic yoghurt tubs, and Greek yoghurt tubs, sold as healthy, nutritional, cold dairy products.
+Built a marketing + light e-commerce website for "Yoglait" — a yoghurt company based in Tema Community 1, Accra, Ghana. Their products are drinking yoghurt pouches, probiotic yoghurt tubs, and Greek yoghurt tubs, sold as healthy, nutritional, cold dairy products.
 
 BRAND VOICE / TAGLINES (use across hero, CTAs, section headers — don't reuse all in one spot):
 - "Joy In A Cup"
@@ -31,17 +31,6 @@ HOME PAGE (build fully now)
 
 Keep everything in this design system consistent — this becomes the base I'll build Menu, About and Contact on top of in the next steps.
 
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://yoglait.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/bf1d493e-7727-4db2-815e-844bbe9d89d3).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
