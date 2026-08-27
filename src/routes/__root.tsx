@@ -83,16 +83,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Yoglait — Joy In A Cup" },
+      { title: "Stelike Exclusives — Modern Luxury Furnishing" },
       {
         name: "description",
-        content: "Healthy, tasty drinking yoghurt and probiotic tubs made in Accra, Ghana.",
+        content: "TV tables, center tables, bedframes and mirrors, crafted for modern Ghanaian homes.",
       },
-      { name: "author", content: "Yoglait" },
-      { property: "og:title", content: "Yoglait — Joy In A Cup" },
+      { name: "author", content: "Stelike Exclusives" },
+      { property: "og:title", content: "Stelike Exclusives — Modern Luxury Furnishing" },
       {
         property: "og:description",
-        content: "Healthy, tasty drinking yoghurt and probiotic tubs made in Accra, Ghana.",
+        content: "TV tables, center tables, bedframes and mirrors, crafted for modern Ghanaian homes.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -103,7 +103,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Poppins:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@300;400;500;600&display=swap",
       },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
     ],

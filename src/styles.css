@@ -5,7 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Yoglait design system — playful, cold/fresh, dairy-bright.
+ * Stelike Exclusives design system — modern luxury, restrained and quiet.
+ * Forked from Yoglait's playful dairy-bright system; tokens renamed sparingly
+ * so existing components (bg-hero-gradient, bg-sky, etc.) keep working while
+ * the underlying values shift to the new palette. Flavour tokens are kept
+ * as-is for now — they're removed in the product-catalog pass, not here.
  * All colors are oklch tokens. Never hardcode colors in components.
  */
 
@@ -18,8 +22,8 @@
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
 
-  --font-display: "Fredoka", "Baloo 2", system-ui, sans-serif;
-  --font-sans: "Poppins", system-ui, sans-serif;
+  --font-display: "Cormorant Garamond", "Georgia", serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -53,30 +57,30 @@
 }
 
 :root {
-  --radius: 1rem;
-  --background: oklch(0.968 0.017 95);
-  --foreground: oklch(0.32 0.062 250);
-  --card: oklch(0.995 0.004 95);
-  --card-foreground: oklch(0.32 0.062 250);
-  --popover: oklch(0.995 0.004 95);
-  --popover-foreground: oklch(0.32 0.062 250);
-  --primary: oklch(0.665 0.185 38);
-  --primary-foreground: oklch(0.99 0.005 95);
-  --secondary: oklch(0.89 0.052 231);
-  --secondary-foreground: oklch(0.32 0.062 250);
-  --muted: oklch(0.945 0.014 95);
-  --muted-foreground: oklch(0.53 0.035 250);
-  --accent: oklch(0.83 0.152 85);
-  --accent-foreground: oklch(0.28 0.06 250);
+  --radius: 0.375rem;
+  --background: oklch(0.975 0.006 80);
+  --foreground: oklch(0.22 0.01 260);
+  --card: oklch(0.99 0.004 80);
+  --card-foreground: oklch(0.22 0.01 260);
+  --popover: oklch(0.99 0.004 80);
+  --popover-foreground: oklch(0.22 0.01 260);
+  --primary: oklch(0.24 0.012 260);
+  --primary-foreground: oklch(0.98 0.006 80);
+  --secondary: oklch(0.93 0.008 80);
+  --secondary-foreground: oklch(0.22 0.01 260);
+  --muted: oklch(0.95 0.006 80);
+  --muted-foreground: oklch(0.5 0.012 260);
+  --accent: oklch(0.72 0.09 85);
+  --accent-foreground: oklch(0.22 0.01 260);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.99 0.005 95);
-  --border: oklch(0.9 0.02 240);
-  --input: oklch(0.9 0.02 240);
-  --ring: oklch(0.665 0.185 38);
+  --destructive-foreground: oklch(0.98 0.006 80);
+  --border: oklch(0.88 0.008 80);
+  --input: oklch(0.88 0.008 80);
+  --ring: oklch(0.72 0.09 85);
 
-  --cream: oklch(0.968 0.017 95);
-  --sky: oklch(0.89 0.052 231);
-  --sky-deep: oklch(0.79 0.088 233);
+  --cream: oklch(0.97 0.008 80);
+  --sky: oklch(0.93 0.01 80);
+  --sky-deep: oklch(0.86 0.014 80);
 
   --flavour-plain: oklch(0.93 0.005 250);
   --flavour-vanilla: oklch(0.88 0.145 95);
@@ -86,9 +90,9 @@
   --flavour-coconut: oklch(0.78 0.1 235);
   --flavour-pineapple: oklch(0.87 0.16 92);
 
-  --gradient-hero: linear-gradient(180deg, var(--sky) 0%, oklch(0.94 0.03 220) 55%, var(--cream) 100%);
-  --shadow-float: 0 14px 30px -18px oklch(0.32 0.062 250 / 0.25);
-  --shadow-soft: 0 6px 16px -12px oklch(0.32 0.062 250 / 0.28);
+  --gradient-hero: linear-gradient(180deg, var(--sky) 0%, oklch(0.94 0.008 80) 55%, var(--cream) 100%);
+  --shadow-float: 0 14px 30px -18px oklch(0.22 0.01 260 / 0.18);
+  --shadow-soft: 0 6px 16px -12px oklch(0.22 0.01 260 / 0.2);
 }
 
 @utility bg-hero-gradient {
@@ -112,6 +116,7 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-weight: 300;
   }
 
   h1,
@@ -120,8 +125,8 @@
   h4,
   .font-display {
     font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-weight: 500;
+    letter-spacing: 0.01em;
   }
 }
 
