@@ -57,6 +57,21 @@ export function Navbar() {
             Stelike Exclusives
           </Link>
 
+          <ul className="ml-8 hidden items-center gap-6 sm:flex">
+            {mobileTabs.map((t) => (
+              <li key={t.to}>
+                <Link
+                  to={t.to}
+                  activeOptions={{ exact: t.to === "/" }}
+                  activeProps={{ className: "text-primary border-primary" }}
+                  className="border-b-2 border-transparent pb-1 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
+                >
+                  {t.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <button
               type="button"

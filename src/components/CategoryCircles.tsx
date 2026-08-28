@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Sparkles, BedDouble } from "lucide-react";
 import type { Category } from "@/lib/products";
+import { SectionTitle } from "./SectionTitle";
 import zenTvConsole from "@/assets/products/zen-tv-console.png";
 import centreTable from "@/assets/products/centre-table.png";
 import halfMoonMirror from "@/assets/products/half-moon-mirror.png";
@@ -18,8 +19,8 @@ const categories: { id: Category; label: string; image?: string; icon?: typeof B
 export function CategoryCircles() {
   return (
     <section className="mx-auto max-w-6xl px-5 sm:px-8">
-      <h2 className="font-display text-lg font-medium">Browse Category</h2>
-      <ul className="mt-4 flex justify-between gap-2 sm:justify-start sm:gap-6">
+      <SectionTitle>Browse Category</SectionTitle>
+      <ul className="mt-6 flex justify-between gap-2 sm:justify-center sm:gap-8">
         {categories.map((c) => (
           <li key={c.id}>
             <Link
@@ -27,7 +28,7 @@ export function CategoryCircles() {
               search={{ category: c.id }}
               className="flex flex-col items-center gap-1.5 text-center"
             >
-              <span className="grid h-14 w-14 place-items-center overflow-hidden rounded-full bg-secondary text-foreground ring-1 ring-border transition-transform duration-150 hover:scale-105 sm:h-16 sm:w-16">
+              <span className="grid h-14 w-14 place-items-center overflow-hidden rounded-full bg-secondary text-primary ring-1 ring-primary/40 transition-transform duration-150 hover:scale-105 sm:h-16 sm:w-16">
                 {c.image ? (
                   <img
                     src={c.image}

@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { GreetingBanner } from "@/components/GreetingBanner";
 import { CategoryCircles } from "@/components/CategoryCircles";
+import { SectionTitle } from "@/components/SectionTitle";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { ProductSheet } from "@/components/ProductSheet";
@@ -34,10 +35,12 @@ function Home() {
       <CategoryCircles />
 
       {/* New Deals */}
-      <section className="mx-auto mt-8 max-w-6xl px-5 sm:px-8">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-medium">New Deals</h2>
-          <Link to="/shop" className="text-xs font-medium text-muted-foreground hover:text-foreground">
+      <section className="mx-auto mt-10 max-w-6xl px-5 sm:px-8">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <SectionTitle>New Deals</SectionTitle>
+          </div>
+          <Link to="/shop" className="shrink-0 text-xs font-medium text-primary hover:underline">
             Show all
           </Link>
         </div>

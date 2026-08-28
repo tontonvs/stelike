@@ -45,7 +45,7 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
       </button>
 
       <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="font-display text-sm font-semibold sm:text-base">
+        <span className="font-display text-sm font-semibold text-primary sm:text-base">
           {product.priceOnRequest ? "Contact for price" : `GH₵ ${product.price}`}
         </span>
         <span className="text-[11px] font-medium text-muted-foreground">

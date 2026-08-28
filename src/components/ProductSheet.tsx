@@ -208,7 +208,7 @@ export function ProductSheet({ product, allProducts, onClose, onSelect }: Props)
                 </>
               ) : (
                 <>
-                  <span className="font-display text-xl font-semibold">GH₵ {product.price}</span>
+                  <span className="font-display text-xl font-semibold text-primary">GH₵ {product.price}</span>
                   {outOfStock ? (
                     <span className="rounded-sm bg-destructive/10 px-6 py-2.5 text-sm font-semibold text-destructive">
                       Currently unavailable
