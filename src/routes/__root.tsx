@@ -134,7 +134,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <CartProvider>
         <Navbar />
-        <main className="pb-16 sm:pb-0">
+        <main className="pb-16 pt-20 sm:pt-24 sm:pb-0">
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
         </main>

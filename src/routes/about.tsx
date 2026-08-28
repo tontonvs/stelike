@@ -36,7 +36,7 @@ const steps = [
 
 function About() {
   return (
-    <div className="mx-auto max-w-4xl px-5 pb-20 pt-28 sm:px-8 sm:pt-40">
+    <div className="mx-auto max-w-4xl px-5 pb-20 sm:px-8">
       <p className="text-xs font-semibold uppercase tracking-wide text-accent">Our promise</p>
       <h1 className="font-display mt-2 text-3xl font-semibold sm:text-4xl">
         Order it. We deliver and install it. You only pay once it's in your home.

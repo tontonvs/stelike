@@ -13,7 +13,7 @@ export const Route = createFileRoute("/contact")({
 function Contact() {
   return (
     <div className="bg-gradient-contact">
-      <div className="mx-auto max-w-3xl px-5 pb-20 pt-28 sm:px-8 sm:pt-40">
+      <div className="mx-auto max-w-3xl px-5 pb-20 sm:px-8">
         <h1 className="font-display text-3xl font-semibold sm:text-4xl">Get in touch</h1>
         <p className="mt-3 max-w-lg text-foreground/80">
           Questions about a piece, a custom build, or a delivery — reach us directly, we
