@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useCart } from "./CartProvider";
 import { resolveCartItems, cartSubtotal } from "@/lib/cart";
-import { flavourChip, flavourLabels } from "@/lib/products";
+import { categoryLabels } from "@/lib/products";
 import { useProducts } from "@/hooks/useProducts";
 import { EASE_OUT } from "@/lib/motion";
 
@@ -83,11 +83,11 @@ export function CartDrawer() {
                     Your cart's empty — chill, no pressure.
                   </p>
                   <Link
-                    to="/menu"
+                    to="/shop"
                     onClick={closeCart}
                     className="mt-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
                   >
-                    Browse Menu
+                    Browse Shop
                   </Link>
                 </div>
               ) : (
@@ -102,7 +102,7 @@ export function CartDrawer() {
                         transition={{ duration: 0.18, ease: EASE_OUT }}
                         className="flex items-center gap-3 rounded-3xl bg-secondary/30 p-3"
                       >
-                        <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-secondary/50">
+                        <span className="grid h-16 w-16 shrink-0 overflow-hidden rounded-sm bg-secondary/50">
                           <img
                             src={product.image}
                             alt={product.name}
@@ -110,20 +110,14 @@ export function CartDrawer() {
                             height={768}
                             loading="lazy"
                             decoding="async"
-                            className="h-12 w-auto object-contain"
+                            className="h-full w-full object-cover"
                           />
                         </span>
 
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-border ${flavourChip[product.flavour]}`}
-                              aria-hidden="true"
-                            />
-                            <span className="truncate text-xs font-medium text-muted-foreground">
-                              {flavourLabels[product.flavour]} · {product.size}
-                            </span>
-                          </div>
+                          <span className="truncate text-xs font-medium text-muted-foreground">
+                            {categoryLabels[product.category]}
+                          </span>
                           <p className="font-display truncate text-sm font-semibold">
                             {product.name}
                           </p>

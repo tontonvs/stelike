@@ -14,7 +14,7 @@ import {
 import { toast } from "sonner";
 import { useCart } from "@/components/CartProvider";
 import { resolveCartItems, cartSubtotal, DELIVERY_FEE } from "@/lib/cart";
-import { flavourChip, flavourLabels } from "@/lib/products";
+import { categoryLabels } from "@/lib/products";
 import { useProducts } from "@/hooks/useProducts";
 import { payWithPaystack } from "@/lib/paystack";
 import { createOrder, lookupOrdersByPhone, type OrderRow } from "@/lib/orders";
@@ -318,10 +318,10 @@ function CheckoutPage() {
             Message us on WhatsApp
           </a>
           <Link
-            to="/menu"
+            to="/shop"
             className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-secondary py-3 text-sm font-semibold text-secondary-foreground transition-transform duration-200 hover:scale-105 active:scale-95"
           >
-            Back to Menu
+            Back to Shop
           </Link>
         </motion.div>
       </section>
@@ -337,13 +337,13 @@ function CheckoutPage() {
         </span>
         <h1 className="font-display text-2xl font-bold">Your cart's empty</h1>
         <p className="max-w-xs text-sm text-muted-foreground">
-          Add a few flavours from the menu before checking out.
+          Add a few pieces from the shop before checking out.
         </p>
         <Link
-          to="/menu"
+          to="/shop"
           className="mt-2 rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-soft transition-transform duration-200 hover:scale-105 active:scale-95"
         >
-          Browse Menu
+          Browse Shop
         </Link>
       </section>
     );
@@ -718,15 +718,9 @@ function CheckoutPage() {
                         />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`h-2 w-2 shrink-0 rounded-full ring-1 ring-border ${flavourChip[product.flavour]}`}
-                            aria-hidden="true"
-                          />
-                          <span className="truncate text-xs text-muted-foreground">
-                            {flavourLabels[product.flavour]} · {product.size}
-                          </span>
-                        </div>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {categoryLabels[product.category]}
+                        </span>
                         <p className="truncate text-sm font-semibold">
                           {product.name} <span className="text-muted-foreground">× {line.qty}</span>
                         </p>

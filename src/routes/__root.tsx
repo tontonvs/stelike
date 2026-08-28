@@ -15,7 +15,6 @@ import { CartProvider } from "../components/CartProvider";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 import { CartDrawer } from "../components/CartDrawer";
-import { AnnouncementPopup } from "../components/AnnouncementPopup";
 import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
@@ -141,7 +140,6 @@ function RootComponent() {
         </main>
         <Footer />
         <CartDrawer />
-        <AnnouncementPopup />
         <Toaster position="top-center" richColors />
       </CartProvider>
     </QueryClientProvider>

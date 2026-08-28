@@ -1,27 +1,23 @@
 import { motion } from "framer-motion";
-import { Info } from "lucide-react";
-import { flavourChip, flavourLabels, type Product } from "@/lib/products";
-import { useCart } from "./CartProvider";
-import { QuantityStepper } from "./QuantityStepper";
+import type { Product } from "@/lib/products";
 import { fadeUp, EASE_OUT } from "@/lib/motion";
 
 export function ProductCard({ product, onOpen }: { product: Product; onOpen: () => void }) {
-  const { addItem } = useCart();
-  const outOfStock = product.inStock === false;
+  const outOfStock = product.stock <= 0;
 
   return (
     <motion.li
       layout={false}
       variants={fadeUp}
-      whileHover={outOfStock ? {} : { y: -4, scale: 1.01 }}
-      transition={{ duration: 0.18, ease: EASE_OUT }}
-      className={`relative flex flex-col rounded-2xl bg-card p-3 shadow-sm sm:p-4 ${
-        outOfStock ? "opacity-85" : ""
+      whileHover={outOfStock ? {} : { y: -4 }}
+      transition={{ duration: 0.2, ease: EASE_OUT }}
+      className={`relative flex flex-col rounded-md bg-card p-3 shadow-sm sm:p-4 ${
+        outOfStock ? "opacity-70" : ""
       }`}
     >
-      {product.badges.includes("NEW") && (
-        <span className="absolute right-2 top-2 z-10 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase text-accent-foreground">
-          New
+      {product.hot && (
+        <span className="absolute left-2 top-2 z-10 rounded-sm bg-accent px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-accent-foreground">
+          Hot
         </span>
       )}
 
@@ -31,60 +27,30 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
         aria-label={`View details for ${product.name}`}
         className="text-left"
       >
-        <span className="grid h-28 w-full place-items-center rounded-xl bg-secondary/40 sm:h-36">
+        <span className="grid aspect-square w-full place-items-center overflow-hidden rounded-sm bg-secondary/40">
           <img
             src={product.image}
-            alt={`${product.name} — ${flavourLabels[product.flavour]} yoghurt`}
+            alt={product.name}
             width={768}
             height={768}
             loading="lazy"
             decoding="async"
-            className="h-24 w-auto object-contain sm:h-32"
+            className="h-full w-full object-cover"
           />
         </span>
-        {outOfStock && (
-          <span className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-destructive">
-            <Info className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            Out of stock
-          </span>
-        )}
-        <span className="mt-2 flex min-w-0 items-center gap-1.5">
-          <span
-            className={`h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-border ${flavourChip[product.flavour]}`}
-            aria-hidden="true"
-          />
-          <span className="truncate text-[11px] font-medium text-muted-foreground">
-            {flavourLabels[product.flavour]} · {product.size}
-          </span>
-        </span>
-        <span className="font-display mt-0.5 block truncate text-sm font-semibold sm:text-base">
+
+        <span className="font-display mt-2.5 block truncate text-sm font-medium sm:text-base">
           {product.name}
         </span>
       </button>
 
-      <ul className="mt-2 flex flex-wrap gap-1">
-        {product.badges
-          .filter((b) => b !== "NEW")
-          .slice(0, 2)
-          .map((b) => (
-            <li
-              key={b}
-              className="rounded-full bg-secondary/60 px-2 py-0.5 text-[9px] font-semibold text-secondary-foreground"
-            >
-              {b}
-            </li>
-          ))}
-      </ul>
-
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="font-display text-sm font-bold sm:text-base">GH₵ {product.price}</span>
-        {outOfStock ? (
-          <span className="rounded-full bg-destructive/10 px-3.5 py-1.5 text-[11px] font-semibold text-destructive sm:px-5 sm:py-2 sm:text-xs">
-            Unavailable
-          </span>
-        ) : (
-          <QuantityStepper onAdd={(qty) => addItem(product.id, qty)} size="md" />
-        )}
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <span className="font-display text-sm font-semibold sm:text-base">
+          GH₵ {product.price}
+        </span>
+        <span className="text-[11px] font-medium text-muted-foreground">
+          {outOfStock ? "Out of stock" : `${product.stock} left`}
+        </span>
       </div>
     </motion.li>
   );

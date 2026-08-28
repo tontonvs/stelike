@@ -10,24 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ContactRouteImport } from './routes/contact'
-import { Route as MenuRouteImport } from './routes/menu'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OrdersRouteImport } from './routes/orders'
-import { Route as RiderLoginRouteImport } from './routes/rider-login'
-import { Route as StaffRouteImport } from './routes/staff'
-import { Route as StaffLoginRouteImport } from './routes/staff-login'
+import { Route as ShopRouteImport } from './routes/shop'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -40,11 +31,6 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MenuRoute = MenuRouteImport.update({
-  id: '/menu',
-  path: '/menu',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -55,109 +41,60 @@ const OrdersRoute = OrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RiderLoginRoute = RiderLoginRouteImport.update({
-  id: '/rider-login',
-  path: '/rider-login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StaffRoute = StaffRouteImport.update({
-  id: '/staff',
-  path: '/staff',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StaffLoginRoute = StaffLoginRouteImport.update({
-  id: '/staff-login',
-  path: '/staff-login',
+const ShopRoute = ShopRouteImport.update({
+  id: '/shop',
+  path: '/shop',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
-  '/menu': typeof MenuRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
-  '/rider-login': typeof RiderLoginRoute
-  '/staff': typeof StaffRoute
-  '/staff-login': typeof StaffLoginRoute
+  '/shop': typeof ShopRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
-  '/menu': typeof MenuRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
-  '/rider-login': typeof RiderLoginRoute
-  '/staff': typeof StaffRoute
-  '/staff-login': typeof StaffLoginRoute
+  '/shop': typeof ShopRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
-  '/menu': typeof MenuRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
-  '/rider-login': typeof RiderLoginRoute
-  '/staff': typeof StaffRoute
-  '/staff-login': typeof StaffLoginRoute
+  '/shop': typeof ShopRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/about'
-    | '/checkout'
-    | '/contact'
-    | '/menu'
-    | '/notifications'
-    | '/orders'
-    | '/rider-login'
-    | '/staff'
-    | '/staff-login'
+    '/' | '/checkout' | '/contact' | '/notifications' | '/orders' | '/shop'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/about'
-    | '/checkout'
-    | '/contact'
-    | '/menu'
-    | '/notifications'
-    | '/orders'
-    | '/rider-login'
-    | '/staff'
-    | '/staff-login'
+  to: '/' | '/checkout' | '/contact' | '/notifications' | '/orders' | '/shop'
   id:
     | '__root__'
     | '/'
-    | '/about'
     | '/checkout'
     | '/contact'
-    | '/menu'
     | '/notifications'
     | '/orders'
-    | '/rider-login'
-    | '/staff'
-    | '/staff-login'
+    | '/shop'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
   CheckoutRoute: typeof CheckoutRoute
   ContactRoute: typeof ContactRoute
-  MenuRoute: typeof MenuRoute
   NotificationsRoute: typeof NotificationsRoute
   OrdersRoute: typeof OrdersRoute
-  RiderLoginRoute: typeof RiderLoginRoute
-  StaffRoute: typeof StaffRoute
-  StaffLoginRoute: typeof StaffLoginRoute
+  ShopRoute: typeof ShopRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -167,13 +104,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -190,13 +120,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/menu': {
-      id: '/menu'
-      path: '/menu'
-      fullPath: '/menu'
-      preLoaderRoute: typeof MenuRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/notifications': {
       id: '/notifications'
       path: '/notifications'
@@ -211,25 +134,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/rider-login': {
-      id: '/rider-login'
-      path: '/rider-login'
-      fullPath: '/rider-login'
-      preLoaderRoute: typeof RiderLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/staff': {
-      id: '/staff'
-      path: '/staff'
-      fullPath: '/staff'
-      preLoaderRoute: typeof StaffRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/staff-login': {
-      id: '/staff-login'
-      path: '/staff-login'
-      fullPath: '/staff-login'
-      preLoaderRoute: typeof StaffLoginRouteImport
+    '/shop': {
+      id: '/shop'
+      path: '/shop'
+      fullPath: '/shop'
+      preLoaderRoute: typeof ShopRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -237,15 +146,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
   CheckoutRoute: CheckoutRoute,
   ContactRoute: ContactRoute,
-  MenuRoute: MenuRoute,
   NotificationsRoute: NotificationsRoute,
   OrdersRoute: OrdersRoute,
-  RiderLoginRoute: RiderLoginRoute,
-  StaffRoute: StaffRoute,
-  StaffLoginRoute: StaffLoginRoute,
+  ShopRoute: ShopRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
