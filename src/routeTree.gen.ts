@@ -16,6 +16,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as MenuRouteImport } from './routes/menu'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as RiderLoginRouteImport } from './routes/rider-login'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as StaffLoginRouteImport } from './routes/staff-login'
 
@@ -54,6 +55,11 @@ const OrdersRoute = OrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RiderLoginRoute = RiderLoginRouteImport.update({
+  id: '/rider-login',
+  path: '/rider-login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaffRoute = StaffRouteImport.update({
   id: '/staff',
   path: '/staff',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/menu': typeof MenuRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
+  '/rider-login': typeof RiderLoginRoute
   '/staff': typeof StaffRoute
   '/staff-login': typeof StaffLoginRoute
 }
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/menu': typeof MenuRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
+  '/rider-login': typeof RiderLoginRoute
   '/staff': typeof StaffRoute
   '/staff-login': typeof StaffLoginRoute
 }
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/menu': typeof MenuRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
+  '/rider-login': typeof RiderLoginRoute
   '/staff': typeof StaffRoute
   '/staff-login': typeof StaffLoginRoute
 }
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/menu'
     | '/notifications'
     | '/orders'
+    | '/rider-login'
     | '/staff'
     | '/staff-login'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/menu'
     | '/notifications'
     | '/orders'
+    | '/rider-login'
     | '/staff'
     | '/staff-login'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/menu'
     | '/notifications'
     | '/orders'
+    | '/rider-login'
     | '/staff'
     | '/staff-login'
   fileRoutesById: FileRoutesById
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   MenuRoute: typeof MenuRoute
   NotificationsRoute: typeof NotificationsRoute
   OrdersRoute: typeof OrdersRoute
+  RiderLoginRoute: typeof RiderLoginRoute
   StaffRoute: typeof StaffRoute
   StaffLoginRoute: typeof StaffLoginRoute
 }
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rider-login': {
+      id: '/rider-login'
+      path: '/rider-login'
+      fullPath: '/rider-login'
+      preLoaderRoute: typeof RiderLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff': {
       id: '/staff'
       path: '/staff'
@@ -223,6 +243,7 @@ const rootRouteChildren: RootRouteChildren = {
   MenuRoute: MenuRoute,
   NotificationsRoute: NotificationsRoute,
   OrdersRoute: OrdersRoute,
+  RiderLoginRoute: RiderLoginRoute,
   StaffRoute: StaffRoute,
   StaffLoginRoute: StaffLoginRoute,
 }
