@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { GreetingBanner } from "@/components/GreetingBanner";
+import { Hero } from "@/components/Hero";
 import { CategoryCircles } from "@/components/CategoryCircles";
 import { SectionTitle } from "@/components/SectionTitle";
 import { ProductCard } from "@/components/ProductCard";
@@ -30,7 +30,7 @@ function Home() {
 
   return (
     <div>
-      <GreetingBanner />
+      <Hero />
 
       <CategoryCircles />
 

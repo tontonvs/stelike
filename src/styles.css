@@ -25,6 +25,8 @@
   --font-brand: "Allura", cursive;
   --font-display: "Playfair Display", Georgia, serif;
   --font-sans: "Poppins", system-ui, sans-serif;
+  --font-hero: "Archivo Black", sans-serif;
+  --font-ubuntu: "Ubuntu", sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -112,6 +114,13 @@
 
 @utility text-gold-gradient {
   background-image: linear-gradient(120deg, #fddb92 0%, var(--brand-yellow) 45%, #b9812f 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+@utility text-gold-orange-gradient {
+  background-image: linear-gradient(100deg, var(--brand-yellow) 0%, var(--brand-orange) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
