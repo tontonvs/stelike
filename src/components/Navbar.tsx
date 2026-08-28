@@ -53,7 +53,7 @@ export function Navbar() {
     <>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background">
         <nav className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-8">
-          <Link to="/" className="font-display shrink-0 text-xl font-medium tracking-tight">
+          <Link to="/" className="font-brand shrink-0 text-3xl tracking-tight sm:text-4xl">
             Stelike Exclusives
           </Link>
 

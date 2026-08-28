@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X, Info } from "lucide-react";
 import { categoryLabels, variantsOf, type Product } from "@/lib/products";
+import { business } from "@/lib/business";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { useCart } from "./CartProvider";
 import { QuantityStepper } from "./QuantityStepper";
 import { EASE_OUT } from "@/lib/motion";
@@ -136,6 +138,23 @@ export function ProductSheet({ product, allProducts, onClose, onSelect }: Props)
                 </p>
               )}
               <p className="mt-3 text-sm text-muted-foreground">{product.description}</p>
+              {product.colours && product.colours.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Available colours
+                  </p>
+                  <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                    {product.colours.map((c) => (
+                      <li
+                        key={c}
+                        className="rounded-sm bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground"
+                      >
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {variantsOf(product, allProducts).length > 0 && (
@@ -172,13 +191,32 @@ export function ProductSheet({ product, allProducts, onClose, onSelect }: Props)
           {/* Sticky price + add-to-cart bar */}
           <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background/95 backdrop-blur">
             <div className="mx-auto flex max-w-lg items-center justify-between gap-4 px-4 py-3 sm:px-6">
-              <span className="font-display text-xl font-semibold">GH₵ {product.price}</span>
-              {outOfStock ? (
-                <span className="rounded-sm bg-destructive/10 px-6 py-2.5 text-sm font-semibold text-destructive">
-                  Currently unavailable
-                </span>
+              {product.priceOnRequest ? (
+                <>
+                  <span className="font-display text-lg font-semibold">Contact for price</span>
+                  <a
+                    href={buildWhatsAppLink(
+                      business.whatsappNumber,
+                      `Hi Stelike, I'd like to ask about the ${product.name}.`,
+                    )}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-sm bg-accent px-6 py-2.5 text-sm font-semibold text-accent-foreground transition-transform duration-150 hover:scale-105 active:scale-95"
+                  >
+                    Ask on WhatsApp
+                  </a>
+                </>
               ) : (
-                <QuantityStepper size="md" onAdd={(qty) => addItem(product.id, qty)} />
+                <>
+                  <span className="font-display text-xl font-semibold">GH₵ {product.price}</span>
+                  {outOfStock ? (
+                    <span className="rounded-sm bg-destructive/10 px-6 py-2.5 text-sm font-semibold text-destructive">
+                      Currently unavailable
+                    </span>
+                  ) : (
+                    <QuantityStepper size="md" onAdd={(qty) => addItem(product.id, qty)} />
+                  )}
+                </>
               )}
             </div>
           </div>

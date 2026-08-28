@@ -46,7 +46,7 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <span className="font-display text-sm font-semibold sm:text-base">
-          GH₵ {product.price}
+          {product.priceOnRequest ? "Contact for price" : `GH₵ ${product.price}`}
         </span>
         <span className="text-[11px] font-medium text-muted-foreground">
           {outOfStock ? "Out of stock" : `${product.stock} left`}

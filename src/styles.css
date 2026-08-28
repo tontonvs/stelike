@@ -5,12 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Stelike Exclusives design system — modern luxury, restrained and quiet.
- * Forked from Yoglait's playful dairy-bright system; tokens renamed sparingly
- * so existing components (bg-hero-gradient, bg-sky, etc.) keep working while
- * the underlying values shift to the new palette. Flavour tokens are kept
- * as-is for now — they're removed in the product-catalog pass, not here.
- * All colors are oklch tokens. Never hardcode colors in components.
+ * Stelike Exclusives design system — final brand palette.
+ * Brand: #F4B044 (yellow), #FF6E42 (orange), #F9F9F9 (white), #112532 (dark blue).
+ * Fonts: Allura for the "Stelike Exclusives" wordmark, Poppins for everything else
+ * (titles, hero, card text, footer).
  */
 
 @theme inline {
@@ -22,8 +20,8 @@
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
 
-  --font-display: "Cormorant Garamond", "Georgia", serif;
-  --font-sans: "Manrope", system-ui, sans-serif;
+  --font-brand: "Allura", cursive;
+  --font-sans: "Poppins", system-ui, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -44,59 +42,64 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-cream: var(--cream);
-  --color-sky: var(--sky);
-  --color-sky-deep: var(--sky-deep);
-  --color-flavour-plain: var(--flavour-plain);
-  --color-flavour-vanilla: var(--flavour-vanilla);
-  --color-flavour-strawberry: var(--flavour-strawberry);
-  --color-flavour-banana: var(--flavour-banana);
-  --color-flavour-lime: var(--flavour-lime);
-  --color-flavour-coconut: var(--flavour-coconut);
-  --color-flavour-pineapple: var(--flavour-pineapple);
+  --color-footer: var(--footer);
+  --color-footer-foreground: var(--footer-foreground);
 }
 
 :root {
-  --radius: 0.375rem;
-  --background: oklch(0.975 0.006 80);
-  --foreground: oklch(0.22 0.01 260);
-  --card: oklch(0.99 0.004 80);
-  --card-foreground: oklch(0.22 0.01 260);
-  --popover: oklch(0.99 0.004 80);
-  --popover-foreground: oklch(0.22 0.01 260);
-  --primary: oklch(0.24 0.012 260);
-  --primary-foreground: oklch(0.98 0.006 80);
-  --secondary: oklch(0.93 0.008 80);
-  --secondary-foreground: oklch(0.22 0.01 260);
-  --muted: oklch(0.95 0.006 80);
-  --muted-foreground: oklch(0.5 0.012 260);
-  --accent: oklch(0.72 0.09 85);
-  --accent-foreground: oklch(0.22 0.01 260);
+  --radius: 0.5rem;
+
+  /* Brand hexes, named directly for clarity */
+  --brand-yellow: #f4b044;
+  --brand-orange: #ff6e42;
+  --brand-white: #f9f9f9;
+  --brand-navy: #112532;
+
+  --background: var(--brand-white);
+  --foreground: var(--brand-navy);
+  --card: #ffffff;
+  --card-foreground: var(--brand-navy);
+  --popover: #ffffff;
+  --popover-foreground: var(--brand-navy);
+
+  /* Primary = navy (buttons, nav, text emphasis) */
+  --primary: var(--brand-navy);
+  --primary-foreground: var(--brand-white);
+
+  --secondary: oklch(0.95 0.01 90);
+  --secondary-foreground: var(--brand-navy);
+  --muted: oklch(0.96 0.008 90);
+  --muted-foreground: oklch(0.45 0.02 250);
+
+  /* Accent = orange (badges, CTAs, highlights); yellow used ad-hoc via brand-yellow */
+  --accent: var(--brand-orange);
+  --accent-foreground: #ffffff;
+
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.98 0.006 80);
-  --border: oklch(0.88 0.008 80);
-  --input: oklch(0.88 0.008 80);
-  --ring: oklch(0.72 0.09 85);
+  --destructive-foreground: #ffffff;
 
-  --cream: oklch(0.97 0.008 80);
-  --sky: oklch(0.93 0.01 80);
-  --sky-deep: oklch(0.86 0.014 80);
+  --border: oklch(0.9 0.01 90);
+  --input: oklch(0.9 0.01 90);
+  --ring: var(--brand-orange);
 
-  --flavour-plain: oklch(0.93 0.005 250);
-  --flavour-vanilla: oklch(0.88 0.145 95);
-  --flavour-strawberry: oklch(0.63 0.21 22);
-  --flavour-banana: oklch(0.79 0.13 75);
-  --flavour-lime: oklch(0.8 0.17 140);
-  --flavour-coconut: oklch(0.78 0.1 235);
-  --flavour-pineapple: oklch(0.87 0.16 92);
+  --footer: var(--brand-navy);
+  --footer-foreground: var(--brand-white);
 
-  --gradient-hero: linear-gradient(180deg, var(--sky) 0%, oklch(0.94 0.008 80) 55%, var(--cream) 100%);
-  --shadow-float: 0 14px 30px -18px oklch(0.22 0.01 260 / 0.18);
-  --shadow-soft: 0 6px 16px -12px oklch(0.22 0.01 260 / 0.2);
+  /* Contact page: F9F9F9(50%) -> FF6E42(35%) -> F4B044(15%) */
+  --gradient-contact: linear-gradient(
+    160deg,
+    var(--brand-white) 0%,
+    var(--brand-white) 50%,
+    var(--brand-orange) 85%,
+    var(--brand-yellow) 100%
+  );
+
+  --shadow-float: 0 14px 30px -18px oklch(0.15 0.03 250 / 0.22);
+  --shadow-soft: 0 6px 16px -12px oklch(0.15 0.03 250 / 0.22);
 }
 
-@utility bg-hero-gradient {
-  background-image: var(--gradient-hero);
+@utility bg-gradient-contact {
+  background-image: var(--gradient-contact);
 }
 
 @utility shadow-float {
@@ -116,7 +119,7 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    font-weight: 300;
+    font-weight: 400;
   }
 
   h1,
@@ -124,9 +127,14 @@
   h3,
   h4,
   .font-display {
-    font-family: var(--font-display);
-    font-weight: 500;
-    letter-spacing: 0.01em;
+    font-family: var(--font-sans);
+    font-weight: 600;
+  }
+
+  /* Reserved for the "Stelike Exclusives" wordmark only — not for general titles */
+  .font-brand {
+    font-family: var(--font-brand);
+    font-weight: 400;
   }
 }
 
